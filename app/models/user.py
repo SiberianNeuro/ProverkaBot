@@ -3,7 +3,7 @@ import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import relationship, declarative_base, sessionmaker
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text, select, DateTime, func
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text, select, DateTime, func, inspect
 from sqlalchemy.orm.strategy_options import selectinload
 
 Base = declarative_base()
@@ -45,6 +45,11 @@ class A(Base):
     __mapper_args__ = {"eager_defaults": True}
 
 
+def object_as_dict(obj):
+    return {c.key: getattr(obj, c.key)
+            for c in inspect(obj).mapper.column_attrs}
+
+
 class B(Base):
     __tablename__ = "b"
     id = Column(Integer, primary_key=True)
@@ -71,15 +76,18 @@ async def async_main():
 
     async with async_session() as session:
         async with session.begin():
-            user = session.add(User(child=[Child(data='123'), Child(data='456')], fullname='Nikita', kazarma_id=466, is_supervisor=True, clients_count=500, target_count=350)
+            user = session.add_all([
+                User(child=[Child(data='123'), Child(data='456')], fullname='Nikita', kazarma_id=466, is_supervisor=True, clients_count=500, target_count=350),
+                User(child=[Child(data='987'), Child(data='654')], fullname='Vasya', kazarma_id=100, is_supervisor=False, clients_count=100, target_count=200),
+            ]
+
 
             )
-            stmt = select([User, Child]).join(Child)
+            stmt = select(User.kazarma_id, func.count(Child.id)).join(Child).group_by(User.kazarma_id)
             print(stmt)
 
             result = await session.execute(stmt)
-            for i, j in result.all():
-                print(i.__dict__, j.__dict__)
+            print(result.mappings().all())
             # for a1 in result.scalars().all():
             #     print(a1.fullname, a1.id)
             #     print(f"created at: {a1.create_date}")
