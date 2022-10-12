@@ -17,7 +17,7 @@ class BaseRedis:
 
     async def connect(self):
         if self.closed:
-            self._redis = await aioredis.from_url("redis://localhost", encoding="utf-8", decode_response=True)
+            self._redis = await aioredis.from_url("redis://localhost", encoding="utf-8")
 
     async def disconnect(self):
         if self._redis:
