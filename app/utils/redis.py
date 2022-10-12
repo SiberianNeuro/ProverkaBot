@@ -25,6 +25,6 @@ class BaseRedis:
 
     @property
     def redis(self) -> aioredis.Redis:
-        if not self._redis:
+        if self._redis:
             return self._redis
         raise RuntimeError("Connection is not opened!")

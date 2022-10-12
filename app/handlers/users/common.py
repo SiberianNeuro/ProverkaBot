@@ -8,6 +8,6 @@ from app.models.user import User
 router = Router()
 
 
-@router.message(CommandStart(), state="*")
-async def start(msg: types.Message, user: User):
-    pass
+@router.message(CommandStart())
+async def start(msg: types.Message):
+    await msg.answer('It works!')

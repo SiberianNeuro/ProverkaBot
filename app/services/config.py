@@ -5,18 +5,27 @@ from environs import Env
 
 @dataclass
 class KazarmaConfig:
-    kaz_host: str
-    kaz_user: str
-    kaz_pass: str
-    kaz_name: str
+    host: str
+    user: str
+    password: str
+    name: str
 
 
 @dataclass
 class MainDBConfig:
-    main_db_host: str
-    main_db_user: str
-    main_db_pass: str
-    main_db_name: str
+    host: str
+    user: str
+    password: str
+    name: str
+
+
+@dataclass
+class CmDBConfig:
+    host: str
+    user: str
+    password: str
+    name: str
+
 
 @dataclass
 class TgBot:
@@ -32,8 +41,9 @@ class Misc:
 @dataclass
 class Config:
     tg_bot: TgBot
-    kazarma: KazarmaConfig
+    kaz_db: KazarmaConfig
     main_db: MainDBConfig
+    cm_db: CmDBConfig
     misc: Misc
 
 
@@ -47,17 +57,23 @@ def load_config(path: str = None) -> Config:
             token=env.str("BOT_TOKEN"),
             use_redis=env.bool("USE_REDIS")
         ),
-        kazarma=KazarmaConfig(
-            kaz_host=env.str("KAZ_DB_HOST"),
-            kaz_user=env.str("KAZ_DB_USER"),
-            kaz_pass=env.str("KAZ_DB_PASS"),
-            kaz_name=env.str("KAZ_DB_NAME")
+        kaz_db=KazarmaConfig(
+            host=env.str("KAZ_DB_HOST"),
+            user=env.str("KAZ_DB_USER"),
+            password=env.str("KAZ_DB_PASS"),
+            name=env.str("KAZ_DB_NAME")
         ),
         main_db=MainDBConfig(
-            main_db_host=env.str("MAIN_DB_HOST"),
-            main_db_user=env.str("MAIN_DB_USER"),
-            main_db_pass=env.str("MAIN_DB_PASS"),
-            main_db_name=env.str("MAIN_DB_NAME")
+            host=env.str("MAIN_DB_HOST"),
+            user=env.str("MAIN_DB_USER"),
+            password=env.str("MAIN_DB_PASS"),
+            name=env.str("MAIN_DB_NAME")
         ),
-        misc=Misc()
+        cm_db=CmDBConfig(
+            host=env.str("CM_DB_HOST"),
+            user=env.str("CM_DB_USER"),
+            password=env.str("CM_DB_PASS"),
+            name=env.str("CM_DB_NAME")
+        ),
+        misc=Misc(),
     )

@@ -1,7 +1,7 @@
 from typing import Callable, Dict, Any, Awaitable, Union
 
 from aiogram import BaseMiddleware
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import TelegramObject
 
 from sqlalchemy.orm import sessionmaker
 
@@ -17,9 +17,8 @@ class CommonMiddleware(BaseMiddleware):
 
     async def __call__(
             self,
-            handler: Callable[[Union[Message, CallbackQuery], Dict[str, Any]], Awaitable[Any]],
-            event: Union[Message, CallbackQuery],
+            handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]],
+            event: TelegramObject,
             data: Dict[str, Any]
     ) -> Any:
-        async with self.db.begin() as ses:
-            user = await ses.get(User, event.from_user.id)
+        return await handler(event, data)
