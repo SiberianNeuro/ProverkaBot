@@ -5,19 +5,22 @@ Base = declarative_base()
 
 
 class Cluster(Base):
-    __tablename__ = 'doc_users_clusters'
+    __tablename__ = 'doc_clusters'
 
-    id = Column(Integer, primary_key=True, unique=True)
-    name = Column(String(5))
+    id = Column(Integer, primary_key=True)
+    name = Column(String(20))
 
 
 class User(Base):
     __tablename__ = 'doc_users'
 
-    id = Column(BigInteger, primary_key=True, unique=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=False)
     fullname = Column(String(100), nullable=False)
     kazarma_id = Column(Integer, nullable=False)
+    role_id = Column(Integer, nullable=False)
+    role_name = Column(String(100), nullable=False)
     cluster_id = Column(Integer, ForeignKey(f"{Cluster.__tablename__}.id", ondelete="CASCADE", onupdate="CASCADE"))
     is_checking = Column(Boolean, default=False)
-    clients_count = Column(Integer, nullable=False)
-    target_count = Column(Integer, nullable=False)
+    is_admin = Column(Boolean, default=False)
+    clients_count = Column(Integer)
+    target_count = Column(Integer)

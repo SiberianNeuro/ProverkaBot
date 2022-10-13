@@ -32,6 +32,7 @@ class KazarmaUser(Kazarma):
     lastname = Column(String)
     firstname = Column(String)
     middlename = Column(String)
+    email = Column(String(100))
     active = Column(Integer)
 
 

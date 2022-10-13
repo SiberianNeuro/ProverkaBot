@@ -10,7 +10,7 @@ class IsSuperuserFilter(BaseFilter):
 
     async def __call__(self, obj: Union[Message, CallbackQuery], user: User | None) -> bool:
         if user:
-            return user.is_supervisor
+            return user.is_checking
 
         return False
 

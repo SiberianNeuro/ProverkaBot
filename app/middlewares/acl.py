@@ -21,4 +21,13 @@ class CommonMiddleware(BaseMiddleware):
             event: TelegramObject,
             data: Dict[str, Any]
     ) -> Any:
+        async with self.db.begin() as session:
+            user: User | None = await session.get(User, data['event_from_user'].id)
+
+        data['config'] = self.config
+        data['db_session'] = self.db
+        data['user'] = user
+
         return await handler(event, data)
+
+

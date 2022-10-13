@@ -36,6 +36,10 @@ def setup():
     logger.level("REGISTRATION", no=33, color="<green>")
     logger.level("GOOGLE", no=33, color="<cyan>")
     logger.level("DATABASE", no=33, color="<yellow>")
-    logger.add('logs/logfile_{time:DD_MM_YYYY}.log', rotation='8:30', compression='zip',
-               format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}")
+    logger.add('logs/errors_logfile_{time:DD_MM_YYYY}.log', rotation='8:30', compression='zip',
+               format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}",
+               colorize=True, filter=lambda record: record['level'].name == "ERROR", backtrace=False)
+    logger.add('logs/info_logfile_{time:DD_MM_YYYY}.log', rotation='8:30', compression='zip',
+               format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}",
+               colorize=True, filter=lambda record: record['level'].name == "INFO")
     logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO)

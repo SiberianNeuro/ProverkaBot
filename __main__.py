@@ -11,7 +11,6 @@ from aiogram.fsm.storage.redis import RedisStorage
 from app.middlewares.acl import CommonMiddleware
 from app.models.user import Base
 from app.models.kazarma import Kazarma
-from app.models.cluster import Clusters
 
 
 async def main():
@@ -26,10 +25,11 @@ async def main():
         redis = BaseRedis(db=3)
         await redis.connect()
         storage = RedisStorage(redis=redis.redis)
-        logger.info("Redis storage done.")
+        logger.info("Redis storage ready.")
     else:
+        logger.info("Configure memory storage...")
         storage = MemoryStorage()
-        logger.info('Memory storage chosen.')
+        logger.info('Memory storage ready.')
 
     logger.info('Configure databases...')
 
@@ -38,9 +38,6 @@ async def main():
     )
     kazarma_engine = create_async_engine(
         f"mysql+aiomysql://{config.kaz_db.user}:{config.kaz_db.password}@{config.kaz_db.host}/{config.kaz_db.name}"
-    )
-    common_engine = create_async_engine(
-        f"mysql+aiomysql://{config.cm_db.user}:{config.cm_db.password}@{config.cm_db.host}/{config.cm_db.name}"
     )
     try:
         async with main_engine.begin() as conn:
@@ -51,10 +48,6 @@ async def main():
             await conn.run_sync(Kazarma.metadata.reflect)
         logger.info('Kazarma database connected')
 
-        async with common_engine.begin() as conn:
-            await conn.run_sync(Clusters.metadata.reflect)
-        logger.info('DOC database connected')
-
     except Exception as e:
         logger.error(e)
 
@@ -62,12 +55,11 @@ async def main():
     async_session.configure(
         binds={
             Base: main_engine,
-            Kazarma: kazarma_engine,
-            Clusters: common_engine
+            Kazarma: kazarma_engine
         }
     )
 
-    bot = Bot(token=config.tg_bot.token)
+    bot = Bot(token=config.tg_bot.token, parse_mode='HTML')
     dispatcher = Dispatcher(storage=storage)
 
     logger.info("Configure middleware...")
@@ -77,10 +69,10 @@ async def main():
 
     logger.info("Configure handlers...")
 
+    dispatcher.include_router(common.router)
     dispatcher.include_router(ticket.router)
     dispatcher.include_router(checking.router)
     dispatcher.include_router(register.router)
-    dispatcher.include_router(common.router)
 
     try:
         await bot.delete_webhook(drop_pending_updates=True)
