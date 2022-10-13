@@ -50,14 +50,14 @@ async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMConte
             await state.update_data(temp_users=temp_users)
             text = 'Я нашел в "Инфоклинике" следующие аккаунты:\n\n'
             for num, user in enumerate(temp_users, 1):
-                text += f'<b>{num}. {user.fullname}</b>\nДолжность: {user.name}'
+                text += f'<b>{num}. {user["fullname"]}</b>\nДолжность: {user["name"]}'
             text += '\n\nПожалуйста, выбери, какой из них верный'
             await msg.answer(text=text, reply_markup=await get_confirm(temp_users))
         else:
             await state.update_data(temp_users=temp_users[0])
             text = f'Нашел в "Инфоклинике" аккаунт:\n\n' \
-                   f'<b>{temp_users[0].fullname}</b>' \
-                   f'\nДолжность: {temp_users[0].name}' \
+                   f'<b>{temp_users[0]["fullname"]}</b>' \
+                   f'\nДолжность: {temp_users[0]["name"]}' \
                    f'\nЕсли я прав, пожалуйста, нажми кнопку подтверждения.'
             await msg.answer(text=text, reply_markup=await get_confirm(temp_users[0]))
         await state.set_state(Register.confirm)
@@ -74,23 +74,21 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
         user_data = user_data['temp_users']
         if isinstance(user_data, list):
             for data in user_data:
-                if data.id == callback_data.value:
+                if data['id'] == callback_data.value:
                     user_data = data
                     break
             await state.update_data(temp_users=user_data)
-        if user_data.role_id in (5, 17, 29, 30):
+        if user_data['role_id'] in (5, 17, 29, 30):
             async with db_session.begin() as session:
                 session.add(
                     User(
                         id=call.from_user.id,
-                        fullname=user_data.fullname,
-                        kazarma_id=user_data.id,
-                        role_id=user_data.role_id,
-                        role_name=user_data.name,
+                        fullname=user_data['fullname'],
+                        kazarma_id=user_data['id'],
+                        role_id=user_data['role_id'],
+                        role_name=user_data['name'],
                         cluster_id=18,
-                        is_checking=False,
                         is_admin=True,
-                        clients_count=0
                     )
                 )
                 await session.commit()

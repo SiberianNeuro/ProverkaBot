@@ -35,8 +35,8 @@ async def get_confirm(users: Union[list, Any]) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     if isinstance(users, list):
         for num, user in enumerate(users, 1):
-            builder.button(text=num, callback_data=RegCallback(param='confirm', value=user.id).pack())
+            builder.button(text=num, callback_data=RegCallback(param='confirm', value=user['id']).pack())
     else:
-        builder.button(text='Да, это я', callback_data=RegCallback(param='confirm', value=users.id).pack())
+        builder.button(text='Да, это я', callback_data=RegCallback(param='confirm', value=users['id']).pack())
         builder.button(text='Нет, это не я', callback_data=RegCallback(param='confirm', value=0).pack())
     return builder.as_markup()
