@@ -41,9 +41,7 @@ async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMConte
         temp_user = await session.execute(stmt)
         temp_users = temp_user.mappings().all()
         await session.commit()
-        for user in temp_users:
-            user = {key: value for key, value in user.items()}
-            # user = {column.key: getattr(user, attr) for attr, column in user.__mapper__.c.items()}
+    temp_users = [dict(user.items()) for user in temp_users]
     if not temp_users:
         await msg.answer('Я не нашел такого пользователя в "Инфоклинике".'
                          ' Пожалуйста, проверь, правильно ли ты заполнил имя.')
