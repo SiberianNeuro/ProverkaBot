@@ -39,8 +39,9 @@ async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMConte
     )
     async with db_session.begin() as session:
         temp_user = await session.execute(stmt)
-        temp_users = temp_user.mappings().fetchall()
+        temp_users = temp_user.fetchall()
         await session.commit()
+    print(temp_users)
     if not temp_users:
         await msg.answer('Я не нашел такого пользователя в "Инфоклинике".'
                          ' Пожалуйста, проверь, правильно ли ты заполнил имя.')
