@@ -17,7 +17,7 @@ class User(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=False)
     fullname = Column(String(100), nullable=False)
-    kazarma_id = Column(Integer, nullable=False)
+    kazarma_id = Column(Integer, nullable=False, index=True)
     role_id = Column(Integer, nullable=False)
     role_name = Column(String(100), nullable=False)
     cluster_id = Column(Integer, ForeignKey(f"{Cluster.__tablename__}.id", ondelete="CASCADE", onupdate="CASCADE"))

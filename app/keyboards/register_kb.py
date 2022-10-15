@@ -1,7 +1,7 @@
 from typing import Optional, Any, Union
 
 from aiogram.filters.callback_data import CallbackData
-from aiogram.types import InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
@@ -25,9 +25,28 @@ async def get_clusters_keyboard(db: sessionmaker):
         query = await session.execute(select(Cluster).where(Cluster.id != 18))
         clusters = query.scalars().all()
     keyboard = InlineKeyboardBuilder()
-    for cluster in clusters:
-        keyboard.button(text=cluster.name, callback_data=RegCallback(value=cluster.id).pack())
-    keyboard.adjust(3)
+    keyboard.row(
+        *[
+            InlineKeyboardButton(
+                text=cluster.name, callback_data=RegCallback(param='cluster', value=cluster.id).pack()
+            ) for cluster in clusters[:11]
+        ]
+    )
+    keyboard.adjust(4)
+    keyboard.row(
+        *[
+            InlineKeyboardButton(
+                text=cluster.name, callback_data=RegCallback(param='cluster', value=cluster.id).pack()
+            ) for cluster in clusters[11:14]
+        ]
+    )
+    keyboard.row(
+        *[
+            InlineKeyboardButton(
+                text=cluster.name, callback_data=RegCallback(param='cluster', value=cluster.id).pack()
+            ) for cluster in clusters[14:]
+        ]
+    )
     return keyboard.as_markup()
 
 

@@ -1,10 +1,10 @@
 from aiogram import types, F
 
 from aiogram import Router
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command, Text
 from aiogram.fsm.context import FSMContext
-from sqlalchemy.orm import sessionmaker
 
+from app.keyboards.main_kb import keyboard_generator
 from app.keyboards.register_kb import start_button
 from app.models.user import User
 
@@ -18,4 +18,14 @@ async def start(msg: types.Message, user: User, state: FSMContext):
     if not user:
         await msg.answer('Пора регистрироваться!', reply_markup=await start_button())
     else:
-        await msg.answer('Добро пожаловать.')
+        await msg.answer('Добро пожаловать.', reply_markup=await keyboard_generator(user))
+
+
+@router.message(Command(commands=["cancel"]))
+@router.message(Text(text="отмена", ignore_case=True))
+async def cmd_cancel(message: types.Message, state: FSMContext, user: User):
+    await state.clear()
+    await message.answer(
+        text="Действие отменено",
+        reply_markup=await keyboard_generator(user)
+    )
