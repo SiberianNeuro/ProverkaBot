@@ -10,6 +10,10 @@ class KazarmaConfig:
     password: str
     name: str
 
+    @property
+    def mysql_url(self):
+        return f'{self.user}:{self.password}@{self.host}/{self.name}'
+
 
 @dataclass
 class MainDBConfig:
@@ -17,6 +21,10 @@ class MainDBConfig:
     user: str
     password: str
     name: str
+
+    @property
+    def postgresql_url(self):
+        return f'{self.user}:{self.password}@{self.host}/{self.name}'
 
 
 @dataclass

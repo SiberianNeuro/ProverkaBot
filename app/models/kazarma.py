@@ -14,6 +14,10 @@ class KazarmaClient(Kazarma):
     is_send = Column('visited_military_office', Integer)
     send_date = Column('military_office_date', DateTime)
 
+    @property
+    def fullname(self):
+        return f'{self.lastname} {self.firstname}{" " + self.middlename if self.middlename else ""}'
+
 
 class KazarmaRole(Kazarma):
     __tablename__ = "crm_user_roles"

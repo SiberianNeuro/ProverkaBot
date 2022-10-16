@@ -40,10 +40,8 @@ class Ticket(Base):
     __tablename__ = "doc_tickets"
 
     id = Column(BigInteger, primary_key=True, autoincrement=False)
-    doc_id = Column(BigInteger, ForeignKey(f"{User.__tablename__}.id", onupdate='CASCADE', ondelete='CASCADE'),
-                    index=True)
-    law_id = Column(BigInteger, ForeignKey(f"{User.__tablename__}.id", onupdate='CASCADE', ondelete='CASCADE'),
-                    index=True)
+    doc_id = Column(Integer, index=True)
+    law_id = Column(Integer, index=True)
     status_id = Column(Integer, ForeignKey(f"{TicketStatus.__tablename__}.id", onupdate='CASCADE', ondelete='CASCADE'),
                        server_default='1', index=True)
     created_at = Column(DateTime, server_default=func.now())
@@ -55,7 +53,7 @@ class Appeal(Base):
     __tablename__ = "doc_ticket_appeal"
 
     id = Column(Integer, primary_key=True)
-    ticket_id = Column(BigInteger, ForeignKey(f"{Ticket.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"))
+    ticket_id = Column(Integer, ForeignKey(f"{Ticket.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"))
     sender_id = Column(BigInteger, ForeignKey(f"{User.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"),
                        index=True)
     comment = Column(Text)
@@ -75,5 +73,6 @@ class TicketHistory(Base):
     sender_id = Column(BigInteger, ForeignKey(f"{User.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"))
     status_id = Column(Integer, ForeignKey(f"{TicketStatus.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"),
                        index=True)
-    start_time = Column(DateTime, server_default=func.now())
-    end_time = Column(DateTime, server_default=func.now(), server_onupdate=func.now())
+    comment = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+

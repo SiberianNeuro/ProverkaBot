@@ -32,14 +32,20 @@ class InterceptHandler(logging.Handler):
 
 
 def setup():
-    logger.level("DOCUMENTS", no=33, color="<blue>")
+    logger.level("SEND", no=33, color="<blue>")
     logger.level("REGISTRATION", no=33, color="<green>")
-    logger.level("GOOGLE", no=33, color="<cyan>")
-    logger.level("DATABASE", no=33, color="<yellow>")
-    logger.add('logs/errors_logfile_{time:DD_MM_YYYY}.log', rotation='8:30', compression='zip',
+    logger.level("CHECK", no=33, color="<cyan>")
+    logger.level("APPEAL", no=33, color="<yellow>")
+    logger.add('logs/warnings/logfile_{time:DD_MM_YYYY}.log', rotation='8:30',
                format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}",
-               colorize=True, filter=lambda record: record['level'].name == "ERROR", backtrace=False)
-    logger.add('logs/info_logfile_{time:DD_MM_YYYY}.log', rotation='8:30', compression='zip',
+               colorize=False, filter=lambda record: record['level'].name == "ERROR")
+    logger.add('logs/info/logfile_{time:DD_MM_YYYY}.log', rotation='8:30',
                format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}",
-               colorize=True, filter=lambda record: record['level'].name == "INFO")
+               colorize=False, filter=lambda record: record['level'].name == "INFO")
+    logger.add('logs/registration_logfile.log',
+               format="{time:DD-MM-YYYY at HH:mm:ss}: {level}:  {message}",
+               colorize=False, filter=lambda record: record['level'].name == "REGISTRATION")
+    logger.add('logs/process/logfile_{time:DD_MM_YYYY}.log', rotation='8:30',
+               format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}",
+               colorize=False, filter=lambda record: record['level'].name in ("CHECK", "SEND", "APPEAL"))
     logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO)

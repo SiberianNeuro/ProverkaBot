@@ -3,6 +3,7 @@ from contextlib import suppress
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
+from loguru import logger
 from sqlalchemy import select, and_, func, not_
 from sqlalchemy.orm import sessionmaker
 
@@ -99,6 +100,12 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
                 )
                 await session.commit()
             await call.message.answer('Вы определены как администратор. Добро пожаловать! Что я умею:\n\n')
+            logger.opt(lazy=True).log(
+                'REGISTRATION',
+                'User {user} completely registered as {role}',
+                user=user_data['fullname'],
+                role='admin'
+            )
         else:
             await call.message.answer('Теперь выбери свою команду:',
                                       reply_markup=await get_clusters_keyboard(db_session))
@@ -128,5 +135,13 @@ async def finish_registration(call: types.CallbackQuery, state: FSMContext, db_s
         await call.message.edit_text('Добро пожаловать!', reply_markup=None)
     if callback_data.value > 11:
         await call.message.answer('Ты - проверяющий', reply_markup=await keyboard_generator(user))
+        logger.opt(lazy=True).log(
+            'REGISTRATION',
+            f'User {user_data["fullname"]} completely registered as checker user'
+        )
     else:
         await call.message.answer('Ты - отправляющий', reply_markup=await keyboard_generator(user))
+        logger.opt(lazy=True).log(
+            'REGISTRATION',
+            f'User {user_data["fullname"]} completely registered as common user'
+        )

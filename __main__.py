@@ -45,11 +45,9 @@ async def main():
     logger.info('Configure databases...')
 
     main_engine = create_async_engine(
-        f"postgresql+asyncpg://{config.main_db.user}:{config.main_db.password}@{config.main_db.host}/{config.main_db.name}",
-        echo=False, poolclass=NullPool)
+        f"postgresql+asyncpg://{config.main_db.postgresql_url}", echo=False)
     kazarma_engine = create_async_engine(
-        f"mysql+aiomysql://{config.kaz_db.user}:{config.kaz_db.password}@{config.kaz_db.host}/{config.kaz_db.name}",
-        echo=False, poolclass=NullPool)
+        f"mysql+aiomysql://{config.kaz_db.mysql_url}", echo=False)
     try:
         async with main_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
@@ -68,18 +66,19 @@ async def main():
 
     bot = Bot(token=config.tg_bot.token, parse_mode='HTML')
     dispatcher = Dispatcher(storage=storage)
+    await set_bot_commands(bot)
 
     logger.info("Configure middleware...")
     dispatcher.update.outer_middleware(CommonMiddleware(config=config, db=async_session))
 
-    from app.handlers.users import ticket, checking, register, common
+    from app.handlers.users import send_client, checking, register, common
 
     logger.info("Configure handlers...")
 
     dispatcher.include_router(common.router)
-    dispatcher.include_router(ticket.router)
-    dispatcher.include_router(checking.router)
     dispatcher.include_router(register.router)
+    dispatcher.include_router(send_client.router)
+    dispatcher.include_router(checking.router)
 
     try:
         await bot.delete_webhook(drop_pending_updates=True)
