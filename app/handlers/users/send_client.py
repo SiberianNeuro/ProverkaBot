@@ -31,7 +31,12 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
     if not ticket_id:
         await msg.answer('Не нашел ID клиента в сообщении. Проверь, пожалуйста, чтобы все было верно.')
     else:
-        ticket_id = ticket_id.group(0)
+        ticket_id = int(ticket_id.group(0))
+        async with db_session() as session:
+            ticket = await session.get(Ticket, ticket_id)
+            if ticket:
+                await msg.answer('Этот клиент уже был загружен на проверку.')
+                return
         await state.update_data(ticket_id=ticket_id)
         ticket: TicketContainer = await validate_ticket(db_session, ticket_id, user)
         if isinstance(ticket, str):
