@@ -6,7 +6,7 @@ from aiogram.fsm.context import FSMContext
 
 from app.keyboards.main_kb import keyboard_generator
 from app.keyboards.register_kb import start_button
-from app.models.user import User
+from app.models.doc import User
 
 router = Router()
 router.message.filter(F.chat.type == "private")

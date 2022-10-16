@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import select
 
-from app.models.user import Cluster
+from app.models.doc import Cluster
 
 
 class RegCallback(CallbackData, prefix='register'):

@@ -12,7 +12,7 @@ from aiogram.fsm.storage.redis import RedisStorage
 from sqlalchemy.pool import NullPool
 
 from app.middlewares.acl import CommonMiddleware
-from app.models.user import Base
+from app.models.doc import Base
 from app.models.kazarma import Kazarma
 
 
@@ -46,15 +46,13 @@ async def main():
 
     main_engine = create_async_engine(
         f"postgresql+asyncpg://{config.main_db.user}:{config.main_db.password}@{config.main_db.host}/{config.main_db.name}",
-        echo=True, poolclass=NullPool)
+        echo=False, poolclass=NullPool)
     kazarma_engine = create_async_engine(
         f"mysql+aiomysql://{config.kaz_db.user}:{config.kaz_db.password}@{config.kaz_db.host}/{config.kaz_db.name}",
-        echo=True, poolclass=NullPool)
+        echo=False, poolclass=NullPool)
     try:
         async with main_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        async with kazarma_engine.begin() as conn:
-            await conn.run_sync(Kazarma.metadata)
         logger.info('Done.')
 
     except Exception as e:

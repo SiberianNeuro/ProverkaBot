@@ -1,7 +1,7 @@
 from aiogram.utils.keyboard import KeyboardBuilder, KeyboardButton
 from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
 
-from app.models.user import User
+from app.models.doc import User
 
 
 async def keyboard_generator(user: User) -> ReplyKeyboardMarkup | ReplyKeyboardRemove:

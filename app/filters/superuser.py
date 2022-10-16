@@ -3,7 +3,7 @@ from typing import Union
 from aiogram.filters import BaseFilter
 from aiogram.types import CallbackQuery, Message
 
-from app.models.user import User
+from app.models.doc import User
 
 
 class IsSuperuserFilter(BaseFilter):

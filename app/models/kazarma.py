@@ -1,7 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, SmallInteger
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import declarative_base
-from app.services.config import load_config
 
 Kazarma = declarative_base()
 

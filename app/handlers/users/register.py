@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from app.keyboards.main_kb import cancel_button, keyboard_generator
 from app.keyboards.register_kb import RegCallback, get_confirm, get_clusters_keyboard
 from app.models.kazarma import KazarmaUser, KazarmaRole
-from app.models.user import User
+from app.models.doc import User
 from app.utils.states import Register
 
 router = Router()
