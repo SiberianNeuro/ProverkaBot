@@ -1,30 +1,30 @@
-from typing import Union, NamedTuple, Optional
+from typing import Union, TypedDict
 
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_
 from sqlalchemy.orm import sessionmaker
 
 from app.models.kazarma import KazarmaClient, KazarmaClientUser, KazarmaUser
-from app.models.doc import Ticket, TicketHistory, User
+from app.models.doc import User
 
 
-class TicketInstance(NamedTuple):
+class TicketInstance(TypedDict):
     id: int
     doc_id: int
     law_id: int
 
 
-class TicketHistoryInstance(NamedTuple):
+class TicketHistoryInstance(TypedDict):
     ticket_id: int
     sender_id: int
-    status_id: int = 1
+    status_id: int
 
 
-class ClientInstance(NamedTuple):
+class ClientInstance(TypedDict):
     id: int
     fullname: str
 
 
-class TicketContainer(NamedTuple):
+class TicketContainer(TypedDict):
     ticket: TicketInstance
     ticket_history: TicketHistoryInstance
     client: ClientInstance
@@ -47,7 +47,6 @@ async def validate_ticket(
             KazarmaClientUser.user_id,
             KazarmaUser.role_id
         ).join(KazarmaUser).where(and_(KazarmaClientUser.active == 1, KazarmaClientUser.client_id == ticket_id))
-        print(stmt)
         ticket_data = await session.execute(stmt)
 
         law_id = None

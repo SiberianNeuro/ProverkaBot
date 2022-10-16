@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from app.filters.common import CommonFilter
 from app.models.doc import User, Ticket, TicketHistory
 from app.utils.states import FSMTicket
-from app.utils.validator import validate_ticket, TicketContainer, TicketInstance, TicketHistoryInstance, ClientInstance
+from app.utils.validator import validate_ticket, TicketContainer
 from app.keyboards.load_kb import get_validate_keyboard, SendCallback
 
 router = Router()
@@ -33,12 +33,12 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
     else:
         ticket_id = ticket_id.group(0)
         await state.update_data(ticket_id=ticket_id)
-        ticket = await validate_ticket(db_session, ticket_id, user)
+        ticket: TicketContainer = await validate_ticket(db_session, ticket_id, user)
         if isinstance(ticket, str):
             await msg.answer(ticket)
         else:
             await state.update_data(ticket_info=ticket)
-            await msg.answer(f'Клиент: <b>{ticket.client.fullname}</b>\n'
+            await msg.answer(f'Клиент: <b>{ticket["client"]["fullname"]}</b>\n'
                              f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + ticket_id}\n'
                              f'Будет отправлен как посетивший военкомат.\n\nНажимая кнопку "Подтвердить", ты '
                              f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
@@ -55,11 +55,11 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
             await call.message.edit_text('Валидация клиента отменена.', reply_markup=None)
     else:
         fsm_data = await state.get_data()
-        ticket_info = fsm_data['ticket_info']
+        ticket_info: TicketContainer = fsm_data['ticket_info']
 
-        ticket = Ticket(*ticket_info[0])
+        ticket = Ticket(**ticket_info["ticket"])
 
-        ticket_history = TicketHistory(*ticket_info[1])
+        ticket_history = TicketHistory(**ticket_info["ticket_history"])
         async with db_session() as session:
             try:
                 session.add(ticket)
@@ -73,8 +73,8 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 return
         with suppress(TelegramBadRequest):
             await call.message.edit_text(
-                f'Клиент: <b>{ticket_info[2][1]}</b>\n'
-                f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info[2][0])}\n'
+                f'Клиент: <b>{ticket_info["client"]["fullname"]}</b>\n'
+                f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n'
                 f'Отправлен на проверку.', reply_markup=None
             )
         await state.clear()
