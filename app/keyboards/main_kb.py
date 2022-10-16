@@ -1,10 +1,12 @@
+from typing import Union
+
 from aiogram.utils.keyboard import KeyboardBuilder, KeyboardButton
 from aiogram.types import ReplyKeyboardMarkup, ReplyKeyboardRemove
 
 from app.models.doc import User
 
 
-async def keyboard_generator(user: User) -> ReplyKeyboardMarkup | ReplyKeyboardRemove:
+async def keyboard_generator(user: User) -> Union[ReplyKeyboardMarkup, ReplyKeyboardRemove]:
     if not user:
         return ReplyKeyboardRemove()
     if user.is_checking is True:
