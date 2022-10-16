@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from app.filters.common import CommonFilter
 from app.models.doc import User, Ticket, TicketHistory
 from app.utils.states import FSMTicket
-from app.utils.validator import validate_ticket, TicketContainer
+from app.utils.validator import validate_ticket, TicketContainer, TicketInstance, TicketHistoryInstance, ClientInstance
 from app.keyboards.load_kb import get_validate_keyboard, SendCallback
 
 router = Router()
@@ -55,22 +55,11 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
             await call.message.edit_text('Валидация клиента отменена.', reply_markup=None)
     else:
         fsm_data = await state.get_data()
-        ticket_container: TicketContainer = fsm_data['ticket_info']
-        await call.message.answer(str(ticket_container))
-        t_ticket = ticket_container.ticket
-        t_ticket_history = ticket_container.ticket_history
-        t_client = ticket_container.client
-        ticket = Ticket(
-            id=t_ticket.id,
-            doc_id=t_ticket.doc_id,
-            law_id=t_ticket.law_id
-        )
+        ticket_info = fsm_data['ticket_info']
 
-        ticket_history = TicketHistory(
-            ticket_id=t_ticket_history.ticket_id,
-            sender_id=t_ticket_history.sender_id,
-            status_id=t_ticket_history.status_id
-        )
+        ticket = Ticket(*ticket_info[0])
+
+        ticket_history = TicketHistory(*ticket_info[1])
         async with db_session() as session:
             try:
                 session.add(ticket)
@@ -84,8 +73,8 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 return
         with suppress(TelegramBadRequest):
             await call.message.edit_text(
-                f'Клиент: <b>{ticket.client.fullname}</b>\n'
-                f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(t_client.id)}\n'
+                f'Клиент: <b>{ticket_info[2][1]}</b>\n'
+                f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info[2][0])}\n'
                 f'Отправлен на проверку.', reply_markup=None
             )
         await state.clear()
