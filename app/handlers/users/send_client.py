@@ -11,7 +11,7 @@ from sqlalchemy.orm import sessionmaker
 from app.filters.common import CommonFilter
 from app.models.doc import User
 from app.utils.states import Ticket
-from app.utils.validator import validate_ticket, TicketWrapper
+from app.utils.validator import validate_ticket, TicketContainer
 from app.keyboards.load_kb import get_validate_keyboard, SendCallback
 
 router = Router()
@@ -55,22 +55,22 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
             await call.message.edit_text('Валидация клиента отменена.', reply_markup=None)
     else:
         fsm_data = await state.get_data()
-        ticket: TicketWrapper = fsm_data['ticket_info']
-        async with db_session() as session:
-            try:
-                session.add(ticket.ticket)
-                session.add(ticket.ticket_history)
-                await session.commit()
-            except Exception as e:
-                logger.error(e)
-                await call.message.answer('Произошла ошибка при добавлении в базу данных. Пожалуйста, попробуй снова.')
-                await state.clear()
-                await session.rollback()
-                return
-        with suppress(TelegramBadRequest):
-            await call.message.edit_text(
-                f'Клиент: <b>{ticket.client.fullname}</b>\n'
-                f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket.client.id)}\n'
-                f'Отправлен на проверку.', reply_markup=None
-            )
-        await state.clear()
+        ticket: TicketContainer = fsm_data['ticket_info']
+        # async with db_session() as session:
+        #     try:
+        #         session.add(ticket.ticket)
+        #         session.add(ticket.ticket_history)
+        #         await session.commit()
+        #     except Exception as e:
+        #         logger.error(e)
+        #         await call.message.answer('Произошла ошибка при добавлении в базу данных. Пожалуйста, попробуй снова.')
+        #         await state.clear()
+        #         await session.rollback()
+        #         return
+        # with suppress(TelegramBadRequest):
+        #     await call.message.edit_text(
+        #         f'Клиент: <b>{ticket.client.fullname}</b>\n'
+        #         f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket.client.id)}\n'
+        #         f'Отправлен на проверку.', reply_markup=None
+        #     )
+        # await state.clear()

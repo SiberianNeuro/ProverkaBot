@@ -7,23 +7,39 @@ from app.models.kazarma import KazarmaClient, KazarmaClientUser, KazarmaUser
 from app.models.doc import Ticket, TicketHistory, User
 
 
-class TicketWrapper(NamedTuple):
-    ticket: Ticket
-    ticket_history: TicketHistory
-    client: KazarmaClient
+class TicketInstance(NamedTuple):
+    id: int
+    doc_id: int
+    law_id: int
+
+
+class TicketHistoryInstance(NamedTuple):
+    ticket_id: int
+    sender_id: int
+    status_id: int = 1
+
+
+class ClientInstance(NamedTuple):
+    id: int
+    fullname: str
+
+
+class TicketContainer(NamedTuple):
+    ticket: TicketInstance
+    ticket_history: TicketHistoryInstance
+    client: ClientInstance
 
 
 async def validate_ticket(
         db_session: sessionmaker,
         ticket_id: Union[str, int],
         user: User
-) -> Union[TicketWrapper, str]:
-
+) -> Union[TicketContainer, str]:
     async with db_session() as session:
-        client: KazarmaClient = await session.get(KazarmaClient, ticket_id)
-        if not client:
+        temp_client: KazarmaClient = await session.get(KazarmaClient, ticket_id)
+        if not temp_client:
             return "Клиент не найден в базе данных. Пожалуйста, проверь правильность ссылки."
-        # if client.is_send == 0:
+        # if temp_client.is_send == 0:
         #     return 'Метка "Отправлен в военкомат" не проставлена. Пожалуйста, поставь метку, а затем отправь мне ' \
         #            'ссылку заново.'
 
@@ -44,15 +60,18 @@ async def validate_ticket(
     if user.kazarma_id not in (law_id, doc_id):
         return "Данный клиент закреплен не за тобой. Ты можешь отправлять только собственных клиентов."
 
-    ticket = Ticket(
-        id=client.id,
+    ticket = TicketInstance(
+        id=temp_client.id,
         doc_id=doc_id,
         law_id=law_id,
     )
-    history_instance = TicketHistory(
-        ticket_id=client.id,
+    history_instance = TicketHistoryInstance(
+        ticket_id=temp_client.id,
         sender_id=user.id,
         status_id=1
     )
-
-    return TicketWrapper(ticket=ticket, ticket_history=history_instance, client=client)
+    client = ClientInstance(
+        id=temp_client.id,
+        fullname=temp_client.fullname
+    )
+    return TicketContainer(ticket=ticket, ticket_history=history_instance, client=client)
