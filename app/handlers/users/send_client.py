@@ -56,6 +56,7 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
     else:
         fsm_data = await state.get_data()
         ticket_container: TicketContainer = fsm_data['ticket_info']
+        print(ticket_container)
         t_ticket = ticket_container.ticket
         t_ticket_history = ticket_container.ticket_history
         t_client = ticket_container.client
