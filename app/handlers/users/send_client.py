@@ -56,15 +56,19 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
     else:
         fsm_data = await state.get_data()
         ticket_container: TicketContainer = fsm_data['ticket_info']
+        t_ticket = ticket_container.ticket
+        t_ticket_history = ticket_container.ticket_history
+        t_client = ticket_container.client
         ticket = Ticket(
-            id=ticket_container.ticket.id,
-            doc_id=ticket_container.ticket.doc_id,
-            law_id=ticket_container.ticket.law_id
+            id=t_ticket.id,
+            doc_id=t_ticket.doc_id,
+            law_id=t_ticket.law_id
         )
+
         ticket_history = TicketHistory(
-            ticket_id=ticket_container.ticket_history.ticket_id,
-            sender_id=ticket_container.ticket_history.sender_id,
-            status_id=ticket_container.ticket_history.status_id
+            ticket_id=t_ticket_history.ticket_id,
+            sender_id=t_ticket_history.sender_id,
+            status_id=t_ticket_history.status_id
         )
         async with db_session() as session:
             try:
@@ -80,7 +84,7 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
         with suppress(TelegramBadRequest):
             await call.message.edit_text(
                 f'Клиент: <b>{ticket.client.fullname}</b>\n'
-                f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket.client.id)}\n'
+                f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(t_client.id)}\n'
                 f'Отправлен на проверку.', reply_markup=None
             )
         await state.clear()
