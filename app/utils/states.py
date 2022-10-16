@@ -8,7 +8,7 @@ class Register(StatesGroup):
     confirm = State()
 
 
-class Ticket(StatesGroup):
+class FSMTicket(StatesGroup):
 
     id = State()
     confirm = State()
