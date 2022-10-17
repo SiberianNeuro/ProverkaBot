@@ -1,7 +1,7 @@
 import re
 from contextlib import suppress
 
-from aiogram import Router, types, F
+from aiogram import Router, types, F, Bot
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Text
 from aiogram.fsm.context import FSMContext
@@ -10,9 +10,10 @@ from sqlalchemy.orm import sessionmaker
 
 from app.filters.common import CommonFilter
 from app.models.doc import User, Ticket, TicketHistory
+from app.services.config import Config
 from app.utils.states import FSMTicket
 from app.utils.validator import validate_ticket, TicketContainer
-from app.keyboards.load_kb import get_validate_keyboard, SendCallback
+from app.keyboards.load_kb import get_validate_keyboard, SendCallback, get_check_keyboard
 
 router = Router()
 router.message.filter(F.chat.type == 'private', CommonFilter())
@@ -44,7 +45,7 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
         else:
             await state.update_data(ticket_info=ticket)
             await msg.answer(f'Клиент: <b>{ticket["client"]["fullname"]}</b>\n'
-                             f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + ticket_id}\n'
+                             f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_id)}\n'
                              f'Будет отправлен как посетивший военкомат.\n\nНажимая кнопку "Подтвердить", ты '
                              f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
                              f'Ознакомиться с условиями по отправленным можно через команду <b>/help</b>',
@@ -54,7 +55,7 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
 
 @router.callback_query(FSMTicket.confirm, SendCallback.filter(F.param == 'validate'))
 async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_session: sessionmaker,
-                              callback_data: SendCallback):
+                              callback_data: SendCallback, bot: Bot, config: Config, user: User):
     if not callback_data.value:
         with suppress(TelegramBadRequest):
             await call.message.edit_text('Валидация клиента отменена.', reply_markup=None)
@@ -81,5 +82,13 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 f'Клиент: <b>{ticket_info["client"]["fullname"]}</b>\n'
                 f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n'
                 f'Отправлен на проверку.', reply_markup=None
+            )
+            await bot.send_message(
+                chat_id=config.misc.checking_group,
+                text=f'🟡<b>Новый клиент на проверку</b>:\n'
+                     f'{ticket_info["client"]["fullname"]}\n'
+                     f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n'
+                     f'Отправитель:\n{user.fullname} | @{call.from_user.username}',
+                reply_markup=await get_check_keyboard(ticket_info["client"]["id"], user.id)
             )
         await state.clear()

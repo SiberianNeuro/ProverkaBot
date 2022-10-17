@@ -14,6 +14,10 @@ router.message.filter(F.chat.type == "private")
 
 @router.message(CommandStart())
 async def start(msg: types.Message, user: User, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state and current_state.startswith('Checking'):
+        await msg.answer('Сначала тебе нужно закончить проверку заявки.')
+        return
     await state.clear()
     if not user:
         await msg.answer('Пора регистрироваться!', reply_markup=await start_button())
@@ -23,9 +27,13 @@ async def start(msg: types.Message, user: User, state: FSMContext):
 
 @router.message(Command(commands=["cancel"]))
 @router.message(Text(text="отмена", ignore_case=True))
-async def cmd_cancel(message: types.Message, state: FSMContext, user: User):
+async def cmd_cancel(msg: types.Message, state: FSMContext, user: User):
+    current_state = await state.get_state()
+    if current_state and current_state.startswith('Checking'):
+        await msg.answer('Сначала тебе нужно закончить проверку заявки.')
+        return
     await state.clear()
-    await message.answer(
-        text="Действие отменено",
+    await msg.answer(
+        text="Действие отменено.",
         reply_markup=await keyboard_generator(user)
     )

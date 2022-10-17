@@ -28,14 +28,6 @@ class MainDBConfig:
 
 
 @dataclass
-class CmDBConfig:
-    host: str
-    user: str
-    password: str
-    name: str
-
-
-@dataclass
 class TgBot:
     token: str
     use_redis: bool
@@ -43,7 +35,7 @@ class TgBot:
 
 @dataclass
 class Misc:
-    pass
+    checking_group: str
 
 
 @dataclass
@@ -51,7 +43,6 @@ class Config:
     tg_bot: TgBot
     kaz_db: KazarmaConfig
     main_db: MainDBConfig
-    cm_db: CmDBConfig
     misc: Misc
 
 
@@ -77,11 +68,7 @@ def load_config(path: str = None) -> Config:
             password=env.str("MAIN_DB_PASS"),
             name=env.str("MAIN_DB_NAME")
         ),
-        cm_db=CmDBConfig(
-            host=env.str("CM_DB_HOST"),
-            user=env.str("CM_DB_USER"),
-            password=env.str("CM_DB_PASS"),
-            name=env.str("CM_DB_NAME")
+        misc=Misc(
+            checking_group=env.str('CHECKING_GROUP_ID')
         ),
-        misc=Misc(),
     )

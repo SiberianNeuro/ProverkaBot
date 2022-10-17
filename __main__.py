@@ -1,6 +1,6 @@
 import asyncio
 
-from aiogram.types import BotCommand, BotCommandScopeDefault
+from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats
 from loguru import logger
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
@@ -21,7 +21,7 @@ async def set_bot_commands(bot: Bot):
         BotCommand(command="start", description="Вернутся в меню"),
         BotCommand(command="help", description="Получить помощь")
     ]
-    await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+    await bot.set_my_commands(commands, scope=BotCommandScopeAllPrivateChats())
 
 
 async def main():
@@ -33,7 +33,7 @@ async def main():
     if config.tg_bot.use_redis:
         logger.info("Configure redis...")
         from app.utils.redis import BaseRedis
-        redis = BaseRedis(db=3)
+        redis = BaseRedis(host='151.248.121.212', db=3)
         await redis.connect()
         storage = RedisStorage(redis=redis.redis)
         logger.info("Redis storage ready.")
@@ -71,7 +71,7 @@ async def main():
     logger.info("Configure middleware...")
     dispatcher.update.outer_middleware(CommonMiddleware(config=config, db=async_session))
 
-    from app.handlers.users import send_client, checking, register, common
+    from app.handlers.users import send_client, check_client, register, common
 
     logger.info("Configure handlers...")
 

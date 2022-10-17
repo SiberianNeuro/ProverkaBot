@@ -18,3 +18,8 @@ class Checking(StatesGroup):
 
     choice = State()
     comment = State()
+
+
+class Appeal(StatesGroup):
+
+    comment = State()

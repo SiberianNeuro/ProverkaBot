@@ -39,7 +39,7 @@ class TicketStatus(Base):
 class Ticket(Base):
     __tablename__ = "doc_tickets"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=False)
+    id = Column(Integer, primary_key=True, autoincrement=False)
     doc_id = Column(Integer, index=True)
     law_id = Column(Integer, index=True)
     status_id = Column(Integer, ForeignKey(f"{TicketStatus.__tablename__}.id", onupdate='CASCADE', ondelete='CASCADE'),
@@ -47,6 +47,10 @@ class Ticket(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), server_onupdate=func.now())
     appeal = relationship("Appeal")
+
+    @property
+    def link(self):
+        return f'https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/{self.id}'
 
 
 class Appeal(Base):
@@ -75,4 +79,8 @@ class TicketHistory(Base):
                        index=True)
     comment = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
+
+    @property
+    def link(self):
+        return f'https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/{self.ticket_id}'
 
