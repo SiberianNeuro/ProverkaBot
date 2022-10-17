@@ -10,10 +10,20 @@ async def keyboard_generator(user: User) -> Union[ReplyKeyboardMarkup, ReplyKeyb
 
     if not user:
         return ReplyKeyboardRemove()
-    if user.is_checking is True:
+    elif user.is_checking:
         return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Проверить')]], resize_keyboard=True)
+    elif user.is_admin:
+        return ReplyKeyboardRemove()
     else:
-        return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Отправить клиента ▶️')]], resize_keyboard=True)
+        return ReplyKeyboardMarkup(
+            keyboard=[
+                [
+                    KeyboardButton(text='Отправить клиента ▶️'),
+                    KeyboardButton(text='Моя статистика 📊')
+                ]
+            ],
+            resize_keyboard=True
+        )
 
 
 async def cancel_button():

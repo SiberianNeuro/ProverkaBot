@@ -4,7 +4,6 @@ from sqlalchemy.sql import expression
 from app.models.db import Base
 
 
-
 class Cluster(Base):
     __tablename__ = 'doc_clusters'
 
@@ -83,4 +82,3 @@ class TicketHistory(Base):
     @property
     def link(self):
         return f'https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/{self.ticket_id}'
-

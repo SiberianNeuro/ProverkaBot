@@ -1,3 +1,4 @@
+import os
 import re
 from contextlib import suppress
 
@@ -6,18 +7,28 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Text
 from aiogram.fsm.context import FSMContext
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.filters.common import CommonFilter
 from app.models.doc import User, Ticket, TicketHistory
 from app.services.config import Config
 from app.utils.states import FSMTicket
+from app.utils.statistic import get_user_statistic
 from app.utils.validator import validate_ticket, TicketContainer
 from app.keyboards.load_kb import get_validate_keyboard, SendCallback, get_check_keyboard
 
 router = Router()
 router.message.filter(F.chat.type == 'private', CommonFilter())
 router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
+
+
+@router.message(Text(text='Моя статистика 📊'))
+async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: User, bot: Bot):
+    res = await get_user_statistic(db=db_session, user=user, bot=bot)
+    await msg.answer_document(res.FSI)
+    os.remove(res.filepath)
+
 
 
 @router.message(Text(text='Отправить клиента ▶️'))
@@ -46,7 +57,7 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
             await state.update_data(ticket_info=ticket)
             await msg.answer(f'Клиент: <b>{ticket["client"]["fullname"]}</b>\n'
                              f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_id)}\n'
-                             f'Будет отправлен как посетивший военкомат.\n\nНажимая кнопку "Подтвердить", ты '
+                             f'Отправляется на проверку.\n\nНажимая кнопку "Подтвердить", ты '
                              f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
                              f'Ознакомиться с условиями по отправленным можно через команду <b>/help</b>',
                              reply_markup=await get_validate_keyboard())
@@ -91,4 +102,5 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                      f'Отправитель:\n{user.fullname} | @{call.from_user.username}',
                 reply_markup=await get_check_keyboard(ticket_info["client"]["id"], user.id)
             )
+        logger.opt(lazy=True).log('SEND', f'User {user.fullname} successfully sended client (ID: {ticket.id})')
         await state.clear()

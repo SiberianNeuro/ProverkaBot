@@ -102,9 +102,7 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
             await call.message.answer('Вы определены как администратор. Добро пожаловать! Что я умею:\n\n')
             logger.opt(lazy=True).log(
                 'REGISTRATION',
-                'User {user} completely registered as {role}',
-                user=user_data['fullname'],
-                role='admin'
+                f'User {user_data["fullname"]} completely registered as admin'
             )
         else:
             await call.message.answer('Теперь выбери свою команду:',

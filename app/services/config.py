@@ -28,6 +28,13 @@ class MainDBConfig:
 
 
 @dataclass
+class RedisConfig:
+    host: str
+    port: int
+    db: int
+
+
+@dataclass
 class TgBot:
     token: str
     use_redis: bool
@@ -41,6 +48,7 @@ class Misc:
 @dataclass
 class Config:
     tg_bot: TgBot
+    redis: RedisConfig
     kaz_db: KazarmaConfig
     main_db: MainDBConfig
     misc: Misc
@@ -68,7 +76,12 @@ def load_config(path: str = None) -> Config:
             password=env.str("MAIN_DB_PASS"),
             name=env.str("MAIN_DB_NAME")
         ),
-        misc=Misc(
-            checking_group=env.str('CHECKING_GROUP_ID')
+        redis=RedisConfig(
+         host=env.str("REDIS_HOST"),
+         port=env.int("REDIS_PORT"),
+         db=env.int("REDIS_DB")
         ),
+        misc=Misc(
+            checking_group=env.str("CHECKING_GROUP_ID")
+        )
     )

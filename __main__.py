@@ -33,7 +33,7 @@ async def main():
     if config.tg_bot.use_redis:
         logger.info("Configure redis...")
         from app.utils.redis import BaseRedis
-        redis = BaseRedis(host='151.248.121.212', db=3)
+        redis = BaseRedis(host=config.redis.host, db=config.redis.db)
         await redis.connect()
         storage = RedisStorage(redis=redis.redis)
         logger.info("Redis storage ready.")
@@ -45,9 +45,9 @@ async def main():
     logger.info('Configure databases...')
 
     main_engine = create_async_engine(
-        f"postgresql+asyncpg://{config.main_db.postgresql_url}", echo=False)
+        f"postgresql+asyncpg://{config.main_db.postgresql_url}", echo=False, pool_pre_ping=True)
     kazarma_engine = create_async_engine(
-        f"mysql+aiomysql://{config.kaz_db.mysql_url}", echo=False)
+        f"mysql+aiomysql://{config.kaz_db.mysql_url}", echo=False, pool_pre_ping=True)
     try:
         async with main_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
@@ -71,14 +71,16 @@ async def main():
     logger.info("Configure middleware...")
     dispatcher.update.outer_middleware(CommonMiddleware(config=config, db=async_session))
 
-    from app.handlers.users import send_client, check_client, register, common
+    from app.handlers.users import send_client, check_client, register, common, appeal, admin_commands
 
     logger.info("Configure handlers...")
 
     dispatcher.include_router(common.router)
     dispatcher.include_router(register.router)
     dispatcher.include_router(send_client.router)
-    dispatcher.include_router(checking.router)
+    dispatcher.include_router(check_client.router)
+    dispatcher.include_router(appeal.router)
+    dispatcher.include_router(admin_commands.router)
 
     try:
         await bot.delete_webhook(drop_pending_updates=True)

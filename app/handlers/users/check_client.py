@@ -34,9 +34,9 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> уже на проверке'
         elif ticket.status_id in (3, 4):
             answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> проверена'
-        elif ticket.status_id == 5:
-            answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> на апелляции'
-        elif ticket.status_id == 1:
+        # elif ticket.status_id == 5:
+        #     answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> на апелляции'
+        elif ticket.status_id in (1, 5):
             answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> принята ' \
                           f'в работу проверяющим @{call.from_user.username}'
             try:
