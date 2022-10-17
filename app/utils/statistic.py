@@ -17,7 +17,6 @@ class StatisticContainer(NamedTuple):
     filepath: Path
 
 
-
 async def get_user_statistic(db: sessionmaker, user: User, bot: Bot):
     stmt = select(
         func.CONCAT("https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/", Ticket.id).label('Ссылка'),
