@@ -7,7 +7,6 @@ from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Text
 from aiogram.fsm.context import FSMContext
 from loguru import logger
-from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from app.filters.common import CommonFilter
@@ -24,11 +23,10 @@ router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
 
 
 @router.message(Text(text='Моя статистика 📊'))
-async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: User, bot: Bot):
-    res = await get_user_statistic(db=db_session, user=user, bot=bot)
-    await msg.answer_document(res.FSI)
-    os.remove(res.filepath)
-
+async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: User):
+    res = await get_user_statistic(db=db_session, user=user)
+    await msg.answer_document(document=res.FSI)
+    # os.remove(res.filepath)
 
 
 @router.message(Text(text='Отправить клиента ▶️'))

@@ -3,11 +3,12 @@ from contextlib import suppress
 from aiogram import Router, F, types
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import ForceReply
 from loguru import logger
 from sqlalchemy import select, and_, func, not_
 from sqlalchemy.orm import sessionmaker
 
-from app.keyboards.main_kb import cancel_button, keyboard_generator
+from app.keyboards.main_kb import keyboard_generator
 from app.keyboards.register_kb import RegCallback, get_confirm, get_clusters_keyboard
 from app.models.kazarma import KazarmaUser, KazarmaRole
 from app.models.doc import User
@@ -21,8 +22,9 @@ router.callback_query.filter(F.message.chat.type == 'private')
 @router.callback_query(RegCallback.filter(F.param == 'register'))
 async def get_fullname(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
-    await call.message.answer('Напиши свое ФИО.\n\n<i>Например, Иванов Иван Иванович</i>',
-                              reply_markup=await cancel_button())
+    await call.message.answer('Напиши свое ФИО.\n\n<i>Например, Иванов Иван Иванович</i>.\n'
+                              'Если передумаешь, напиши /start или "отмена".',
+                              reply_markup=ForceReply(input_field_placeholder='Иванов Иван Иванович'))
     await state.set_state(Register.fullname)
 
 

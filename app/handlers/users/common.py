@@ -1,8 +1,9 @@
-from aiogram import types, F
+from aiogram import types, F, Bot
 
 from aiogram import Router
 from aiogram.filters import CommandStart, Command, Text
 from aiogram.fsm.context import FSMContext
+from aiogram.types import ForceReply
 
 from app.keyboards.main_kb import keyboard_generator
 from app.keyboards.register_kb import start_button
