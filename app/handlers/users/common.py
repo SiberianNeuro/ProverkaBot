@@ -16,6 +16,7 @@ router.message.filter(F.chat.type == "private")
 @router.message(CommandStart())
 async def start(msg: types.Message, user: User, state: FSMContext):
     current_state = await state.get_state()
+    print(current_state)
     if current_state and current_state.startswith('Checking'):
         await msg.answer('Сначала тебе нужно закончить проверку заявки.')
         return

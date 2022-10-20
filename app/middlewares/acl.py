@@ -23,7 +23,7 @@ class CommonMiddleware(BaseMiddleware):
     ) -> Any:
         async with self.db() as session:
             user: User | None = await session.get(User, (data['event_from_user'].id,))
-        print(data)
+
 
         data['config'] = self.config
         data['db_session'] = self.db

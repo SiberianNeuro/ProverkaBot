@@ -1,10 +1,9 @@
 from contextlib import suppress
-from datetime import datetime, timedelta
 
 from aiogram import Router, types, F, Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramUnauthorizedError, TelegramForbiddenError
-from aiogram.filters import Text
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
@@ -16,28 +15,29 @@ from app.models.doc import Ticket, User, TicketHistory
 from app.utils.states import Checking
 
 router = Router()
-# router.message.filter(CheckerFilter())
-# router.callback_query.filter(CheckerFilter())
+router.message.filter(CheckerFilter())
+router.callback_query.filter(CheckerFilter())
 
 
 @router.callback_query(F.message.chat.type.in_({"group", "supergroup"}), SendCallback.filter(F.param == 'check'))
 async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db_session: sessionmaker,
                                 callback_data: SendCallback, user: User, bot: Bot):
-    # current_state = await state.get_state()
-    # if current_state and current_state.startswith('Checking'):
-    #     await call.answer('Сначала тебе нужно закончить проверку текущей заявки.', show_alert=True)
-    #     return
+    await state.clear()
+    current_state = await state.get_state()
+    print(current_state)
+    if current_state and current_state.startswith('Checking'):
+        await call.answer('Сначала тебе нужно закончить проверку текущей заявки.', show_alert=True)
+        return
     answer_text = ''
     async with db_session() as session:
         ticket: Ticket = await session.get(Ticket, callback_data.value)
+        type_ticket = 'Апелляция' if ticket.status_id == 5 else 'Заявка'
         if ticket.status_id == 2:
-            answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> уже на проверке'
+            answer_text = f'{type_ticket} <a href="{ticket.link}">{ticket.id}</a> уже на проверке'
         elif ticket.status_id in (3, 4):
-            answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> проверена'
-        # elif ticket.status_id == 5:
-        #     answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> на апелляции'
+            answer_text = f'{type_ticket} <a href="{ticket.link}">{ticket.id}</a> проверена'
         elif ticket.status_id in (1, 5):
-            answer_text = f'Заявка <a href={ticket.link}>{ticket.id}</a> принята ' \
+            answer_text = f'{type_ticket} <a href="{ticket.link}">{ticket.id}</a> принята ' \
                           f'в работу проверяющим @{call.from_user.username}'
             try:
                 session.add(
@@ -47,16 +47,13 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
                         status_id=2
                     )
                 )
-                print(id)
+                await session.merge(Ticket(id=callback_data.value, status_id=2))
+
             except Exception as e:
                 logger.error(e)
                 await call.answer('Произошла ошибка в базе данных.Пожалуйста, попробуй снова', show_alert=True)
                 await session.rollback()
-
-        with suppress(TelegramBadRequest):
-            await call.message.edit_text(answer_text, reply_markup=None)
-
-        if ticket.status_id in (1, 5):
+                return
             await state.update_data(author_id=callback_data.user_id)
             await bot.send_message(
                 call.from_user.id,
@@ -65,14 +62,20 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
                 f' "Одобрить" или "Отклонить".',
                 reply_markup=await get_choice_keyboard(ticket.id)
             )
-            await state.set_state(Checking.choice)
+            await state.storage.set_state(
+                bot, key=StorageKey(bot_id=bot.id, chat_id=call.from_user.id, user_id=call.from_user.id),
+                state=Checking.choice
+            )
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} started checking client (ID: {callback_data.value})')
+        with suppress(TelegramBadRequest):
+            await call.message.edit_text(answer_text, reply_markup=None)
 
 
-@router.callback_query(CheckingCallback.filter(), F.chat.type == 'private', Checking.choice)
-async def get_check_choice(call: types.CallbackQuery, state: FSMContext, db_session: sessionmaker, user: User,
-                           callback_data: CheckingCallback):
+
+
+@router.callback_query(CheckingCallback.filter(F.param == "choice"), Checking.choice)
+async def get_check_choice(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback):
     await state.update_data(ticket_id=callback_data.ticket_id, choice=callback_data.choice)
     answer_text = 'Решение принял. Пожалуйста, оставь комментарий по проверке.'
     with suppress(TelegramBadRequest):
@@ -98,11 +101,13 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
                 comment=msg.text,
                 status_id=choice
             )
+
             session.add(ticket)
+            await session.merge(Ticket(id=int(ticket_id), status_id=choice))
             await session.commit()
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} '
-                                      f'{"acessed" if choice == 3 else "denied"} '
+                                      f'{"approved" if choice == 3 else "rejected"} '
                                       f'client ticket (ID: {ticket_id})')
         except Exception as e:
             logger.error(e)
@@ -111,21 +116,16 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             return
     await msg.answer('Результаты проверки и комментарий сохранены.')
     await state.clear()
-    for u in users:
-        try:
-            await bot.send_message(
-                chat_id=u,
-                text=f'Клиент:\n{ticket.link}\n{"одобрен 😏" if choice == 3 else "отклонен 😒"}\n\n'
-                     f'<i>Комментарий проверяющего</i>:\n{msg.text}',
-                reply_markup=await get_answer_keyboard(ticket_id, choice)
-            )
-        except (TelegramUnauthorizedError, TelegramForbiddenError):
-            continue
+    if choice == 4:
+        for u in users:
+            try:
+                await bot.send_message(
+                    chat_id=u,
+                    text=f'Клиент отклонен 😒:\n{ticket.link}\n\n'
+                         f'<i>Комментарий проверяющего</i>:\n{msg.text}',
+                    reply_markup=await get_answer_keyboard(ticket_id, choice)
+                )
+            except (TelegramUnauthorizedError, TelegramForbiddenError):
+                continue
 
 
-
-@router.message(Text(text='Начать проверку ⚙️'))
-async def start_checking(msg: types.Message, state: FSMContext, db_session: sessionmaker):
-    pass
-    await msg.answer('Какое количество клиентов ты хочешь проверить?')
-    await state.set_state()

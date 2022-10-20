@@ -26,7 +26,6 @@ router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
 async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: User):
     res = await get_user_statistic(db=db_session, user=user)
     await msg.answer_document(document=res.FSI)
-    # os.remove(res.filepath)
 
 
 @router.message(Text(text='Отправить клиента ▶️'))
@@ -83,7 +82,6 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
             except Exception as e:
                 logger.error(e)
                 await call.message.answer('Произошла ошибка при добавлении в базу данных. Пожалуйста, попробуй снова.')
-                await state.clear()
                 await session.rollback()
                 return
         with suppress(TelegramBadRequest):

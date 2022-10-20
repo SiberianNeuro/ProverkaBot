@@ -24,14 +24,15 @@ router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
 async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback,
                        db_session: sessionmaker):
     async with db_session() as session:
-        result = await session.execute(select(func.COUNT(TicketHistory.id).where(
-            and_((TicketHistory.ticket_id == callback_data.ticket_id, TicketHistory.status_id == 5)
-                 ))))
-        appeal_count = result.scalar().one()
-        if appeal_count > 2:
-            with suppress(TelegramBadRequest):
-                await call.message.edit_text('Количество апелляций по этому клиенту превышено.', reply_markup=None)
-                return
+        result = await session.execute(select(TicketHistory.id).where(
+            and_(TicketHistory.ticket_id == int(callback_data.ticket_id), TicketHistory.status_id == 5)
+        ))
+        if result:
+            appeal_count = result.scalars().all()
+            if len(appeal_count) > 2:
+                with suppress(TelegramBadRequest):
+                    await call.message.edit_text('Количество апелляций по этому клиенту превышено.', reply_markup=None)
+                    return
     with suppress(TelegramBadRequest):
         await call.message.edit_text('Пожалуйста, напиши обоснование к апелляции, и я отправлю её на проверку.',
                                      reply_markup=None)
@@ -48,12 +49,12 @@ async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_sess
     async with db_session() as session:
         try:
             ticket = TicketHistory(
-                ticket_id=ticket_id,
+                ticket_id=int(ticket_id),
                 sender_id=msg.from_user.id,
                 status_id=5,
                 comment=appeal_text
             )
-            await session.add(ticket)
+            session.add(ticket)
             await session.commit()
         except Exception as e:
             logger.error(e)
