@@ -20,6 +20,7 @@ class CheckerFilter(BaseFilter):
     async def __call__(self, obj: TelegramObject, user: User) -> bool:
         if user:
             return user.is_checking == self.is_checking
+        print(obj)
 
         return False
 

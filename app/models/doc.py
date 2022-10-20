@@ -49,7 +49,7 @@ class Ticket(Base):
 
     @property
     def link(self):
-        return f'https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/{self.id}'
+        return f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{self.id}'
 
 
 class Appeal(Base):
@@ -81,4 +81,4 @@ class TicketHistory(Base):
 
     @property
     def link(self):
-        return f'https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/{self.ticket_id}'
+        return f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{self.ticket_id}'

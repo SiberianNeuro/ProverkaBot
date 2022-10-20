@@ -18,6 +18,10 @@ class KazarmaClient(Kazarma):
     def fullname(self):
         return f'{self.lastname} {self.firstname}{" " + self.middlename if self.middlename else ""}'
 
+    @property
+    def link(self):
+        return f"https://clinica.legal-prod.ru/cabinet/v3/#/clients/{self.id}"
+
 
 class KazarmaRole(Kazarma):
     __tablename__ = "crm_user_roles"
