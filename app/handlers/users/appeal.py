@@ -29,7 +29,7 @@ async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_da
         ))
         if result:
             appeal_count = result.scalars().all()
-            if len(appeal_count) > 2:
+            if len(appeal_count) >= 2:
                 with suppress(TelegramBadRequest):
                     await call.message.edit_text('Количество апелляций по этому клиенту превышено.', reply_markup=None)
                     return
@@ -43,6 +43,9 @@ async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_da
 @router.message(Appeal.comment)
 async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_session: sessionmaker, config: Config,
                       bot: Bot):
+    if not isinstance(msg.content_type, types.ContentType.TEXT):
+        await msg.answer('Я принимаю только текстовые сообщения, без файлов, фотографий и прочего.')
+        return
     state_data = await state.get_data()
     ticket_id = state_data['ticket_id']
     appeal_text = msg.text

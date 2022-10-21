@@ -72,8 +72,6 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             await call.message.edit_text(answer_text, reply_markup=None)
 
 
-
-
 @router.callback_query(CheckingCallback.filter(F.param == "choice"), Checking.choice)
 async def get_check_choice(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback):
     await state.update_data(ticket_id=callback_data.ticket_id, choice=callback_data.choice)
@@ -86,6 +84,9 @@ async def get_check_choice(call: types.CallbackQuery, state: FSMContext, callbac
 @router.message(Checking.comment, F.chat.type == 'private')
 async def get_check_comment(msg: types.Message, state: FSMContext, db_session: sessionmaker, user: User,
                             bot: Bot):
+    if not isinstance(msg.content_type, types.ContentType.TEXT):
+        await msg.answer('Я принимаю только текстовые сообщения, без файлов, фотографий и прочего.')
+        return
     ticket_info = await state.get_data()
     ticket_id, choice = ticket_info['ticket_id'], ticket_info['choice']
     async with db_session() as session:
@@ -127,5 +128,3 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
                 )
             except (TelegramUnauthorizedError, TelegramForbiddenError):
                 continue
-
-

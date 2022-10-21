@@ -16,7 +16,7 @@ class RegCallback(CallbackData, prefix='register'):
 
 async def start_button():
     button = InlineKeyboardBuilder()
-    button.button(text='Зарегистрироваться', callback_data=RegCallback(param='register'))
+    button.button(text='Зарегистрироваться 👆', callback_data=RegCallback(param='register'))
     return button.as_markup()
 
 
@@ -56,6 +56,6 @@ async def get_confirm(users: Union[list, Any]) -> InlineKeyboardMarkup:
         for num, user in enumerate(users, 1):
             builder.button(text=num, callback_data=RegCallback(param='confirm', value=user['id']).pack())
     else:
-        builder.button(text='Да, это я', callback_data=RegCallback(param='confirm', value=users['id']).pack())
-        builder.button(text='Нет, это не я', callback_data=RegCallback(param='confirm', value=0).pack())
+        builder.button(text='Да, это я ✅', callback_data=RegCallback(param='confirm', value=users['id']).pack())
+        builder.button(text='Нет, это не я ❌', callback_data=RegCallback(param='confirm', value=0).pack())
     return builder.as_markup()

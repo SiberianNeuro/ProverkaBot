@@ -22,9 +22,13 @@ async def start(msg: types.Message, user: User, state: FSMContext):
         return
     await state.clear()
     if not user:
-        await msg.answer('Пора регистрироваться!', reply_markup=await start_button())
+        await msg.answer('Привет 🖖\n'
+                         'Я - бот, помогающий с проверкой клиентов.\n'
+                         'Вижу, что ты еще не регистрировался, давай это исправлять!',
+                         reply_markup=await start_button())
     else:
-        await msg.answer('Добро пожаловать.', reply_markup=await keyboard_generator(user))
+        await msg.answer(f'Привет, {user.fullname.split()[1]} 🖖\n'
+                         f'Для получения помощи напиши /help', reply_markup=await keyboard_generator(user))
 
 
 @router.message(Command(commands=["cancel"]))
@@ -39,3 +43,17 @@ async def cmd_cancel(msg: types.Message, state: FSMContext, user: User):
         text="Действие отменено.",
         reply_markup=await keyboard_generator(user)
     )
+
+
+@router.message(Command(commands=["help"]))
+async def command_help(msg: types.Message, user: User):
+    if not user.is_admin and not user.is_checking:
+        await msg.answer('Что я умею:\n'
+                         'Нажми <b>"Отправить клиента ▶️"</b>, чтобы загрузить клиента, '
+                         'подходящего под условия, я помогу тебе в процессе загрузки\n'
+                         'Кнопка <b>"Отклоненные клиенты 🔻"</b> вернет тебе список отклоненных клиентов\n'
+                         'Кнопка <b>"Моя статистика 📊"</b> вернет тебе Excel-табличку со списком твоих клиентов '
+                         'и их текущими статусами')
+    if user.is_checking:
+        await msg.answer('Что я умею:\n'
+                         '')
