@@ -98,5 +98,5 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                      f'Отправитель:\n{user.fullname} | @{call.from_user.username}',
                 reply_markup=await get_check_keyboard(ticket_info["client"]["id"], user.id)
             )
-        logger.opt(lazy=True).log('SEND', f'User {user.fullname} successfully sended client (ID: {ticket.id})')
+        logger.opt(lazy=True).log('SEND', f'User {user.fullname} successfully sent client (ID: {ticket.id})')
         await state.clear()

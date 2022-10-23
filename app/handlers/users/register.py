@@ -1,6 +1,6 @@
 from contextlib import suppress
 
-from aiogram import Router, F, types
+from aiogram import Router, F, types, Bot
 from aiogram.fsm.context import FSMContext
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import ForceReply
@@ -12,6 +12,7 @@ from app.keyboards.main_kb import keyboard_generator
 from app.keyboards.register_kb import RegCallback, get_confirm, get_clusters_keyboard
 from app.models.kazarma import KazarmaUser, KazarmaRole
 from app.models.doc import User
+from app.services.config import Config
 from app.utils.states import Register
 
 router = Router()
@@ -21,7 +22,7 @@ router.callback_query.filter(F.message.chat.type == 'private')
 
 @router.callback_query(RegCallback.filter(F.param == 'register'))
 async def get_fullname(call: types.CallbackQuery, state: FSMContext):
-    await call.answer()
+    await call.message.delete()
     await call.message.answer('Напиши свое ФИО.\n\n<i>Например, Иванов Иван Иванович</i>.\n'
                               'Если передумаешь, напиши /start или "отмена".',
                               reply_markup=ForceReply(input_field_placeholder='Иванов Иван Иванович'))
@@ -53,22 +54,22 @@ async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMConte
     if not temp_users:
         await msg.answer('Я не нашел такого пользователя в "Инфоклинике".'
                          ' Пожалуйста, проверь, правильно ли ты заполнил имя.')
-    else:
-        if len(temp_users) > 1:
+        return
+    elif len(temp_users) > 1:
             await state.update_data(temp_users=temp_users)
             text = 'Я нашел в "Инфоклинике" следующие аккаунты:\n\n'
             for num, user in enumerate(temp_users, 1):
                 text += f'<b>{num}. {user["fullname"]}</b>\nДолжность: {user["name"]}'
             text += '\n\nПожалуйста, выбери, какой из них верный'
             await msg.answer(text=text, reply_markup=await get_confirm(temp_users))
-        else:
-            await state.update_data(temp_users=temp_users[0])
-            text = f'Нашел в "Инфоклинике" аккаунт:\n\n' \
-                   f'<b>{temp_users[0]["fullname"]}</b>' \
-                   f'\nДолжность: {temp_users[0]["name"]}' \
-                   f'\nЕсли я прав, пожалуйста, нажми кнопку подтверждения.'
-            await msg.answer(text=text, reply_markup=await get_confirm(temp_users[0]))
-        await state.set_state(Register.confirm)
+    else:
+        await state.update_data(temp_users=temp_users[0])
+        text = f'Нашел в "Инфоклинике" аккаунт:\n\n' \
+               f'<b>{temp_users[0]["fullname"]}</b>' \
+               f'\nДолжность: {temp_users[0]["name"]}' \
+               f'\nЕсли я прав, пожалуйста, нажми кнопку подтверждения.'
+        await msg.answer(text=text, reply_markup=await get_confirm(temp_users[0]))
+    await state.set_state(Register.confirm)
 
 
 @router.callback_query(RegCallback.filter(F.param == 'confirm'), Register.confirm)
@@ -89,7 +90,7 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
             await state.update_data(temp_users=user_data)
         if user_data['role_id'] in (5, 17, 29, 30):
             async with db_session() as session:
-                await session.merge(
+                user = session.add(
                     User(
                         id=call.from_user.id,
                         fullname=user_data['fullname'],
@@ -100,22 +101,27 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
                         is_admin=True,
                     )
                 )
+
                 await session.commit()
-            await call.message.answer('Вы определены как администратор. Добро пожаловать! Что я умею:\n\n')
+                await session.refresh(user)
+            with suppress(TelegramBadRequest):
+                await call.message.edit_text(f'Вы определены как администратор. '
+                                             f'Добро пожаловать, {user_data["fullname"].split()[1]}',
+                                             reply_markup=None)
             logger.opt(lazy=True).log(
                 'REGISTRATION',
                 f'User {user_data["fullname"]} completely registered as admin'
             )
         else:
-            await call.message.answer('Теперь выбери свою команду:',
-                                      reply_markup=await get_clusters_keyboard(db_session))
+            with suppress(TelegramBadRequest):
+                await call.message.answer('Теперь выбери свою команду:',
+                                          reply_markup=await get_clusters_keyboard(db_session))
             await state.set_state(Register.cluster)
-        await call.message.delete()
 
 
 @router.callback_query(Register.cluster, RegCallback.filter(F.param == "cluster"))
 async def finish_registration(call: types.CallbackQuery, state: FSMContext, db_session: sessionmaker,
-                              callback_data: RegCallback):
+                              callback_data: RegCallback, bot: Bot, config: Config):
     raw_data = await state.get_data()
     user_data = raw_data['temp_users']
     is_checking = True if callback_data.value > 11 else False
@@ -132,9 +138,14 @@ async def finish_registration(call: types.CallbackQuery, state: FSMContext, db_s
         await session.merge(user)
         await session.commit()
     with suppress(TelegramBadRequest):
-        await call.message.edit_text('Добро пожаловать!', reply_markup=None)
+        await call.message.edit_text(f'Добро пожаловать, {user_data["fullname"].split()[1]}!', reply_markup=None)
     if callback_data.value > 11:
-        await call.message.answer('Ты - проверяющий', reply_markup=await keyboard_generator(user))
+        checking_group = await bot.get_chat(config.misc.checking_group)
+        await call.message.answer('Твоя должность определена, как должность проверяющего.\n'
+                                  'Клиентов и апелляции для проверки я отправляю в специальную группу, '
+                                  'вступи в неё по этой ссылке:\n'
+                                  f'👉 {checking_group.invite_link}',
+                                  reply_markup=await keyboard_generator(user))
         logger.opt(lazy=True).log(
             'REGISTRATION',
             f'User {user_data["fullname"]} completely registered as checker user'

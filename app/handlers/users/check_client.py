@@ -15,7 +15,7 @@ from app.models.doc import Ticket, User, TicketHistory
 from app.utils.states import Checking
 
 router = Router()
-router.message.filter(CheckerFilter())
+router.message.filter(F.chat.type == 'private', CheckerFilter())
 router.callback_query.filter(CheckerFilter())
 
 
@@ -24,7 +24,6 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
                                 callback_data: SendCallback, user: User, bot: Bot):
     await state.clear()
     current_state = await state.get_state()
-    print(current_state)
     if current_state and current_state.startswith('Checking'):
         await call.answer('Сначала тебе нужно закончить проверку текущей заявки.', show_alert=True)
         return
