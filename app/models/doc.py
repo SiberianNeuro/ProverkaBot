@@ -43,29 +43,29 @@ class Ticket(Base):
     law_id = Column(Integer, index=True)
     status_id = Column(Integer, ForeignKey(f"{TicketStatus.__tablename__}.id", onupdate='CASCADE', ondelete='CASCADE'),
                        server_default='1', index=True)
+    comment = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), server_onupdate=func.now())
-    appeal = relationship("Appeal")
 
     @property
     def link(self):
         return f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{self.id}'
 
 
-class Appeal(Base):
-    __tablename__ = "doc_ticket_appeal"
-
-    id = Column(Integer, primary_key=True)
-    ticket_id = Column(Integer, ForeignKey(f"{Ticket.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"))
-    sender_id = Column(BigInteger, ForeignKey(f"{User.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"),
-                       index=True)
-    comment = Column(Text)
-    checker_id = Column(BigInteger, ForeignKey(f"{User.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"),
-                        index=True)
-    status_id = Column(Integer, ForeignKey(f"{TicketStatus.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"),
-                       index=True)
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), server_onupdate=func.now())
+# class Appeal(Base):
+#     __tablename__ = "doc_ticket_appeal"
+#
+#     id = Column(Integer, primary_key=True)
+#     ticket_id = Column(Integer, ForeignKey(f"{Ticket.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"))
+#     sender_id = Column(BigInteger, ForeignKey(f"{User.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"),
+#                        index=True)
+#     comment = Column(Text)
+#     checker_id = Column(BigInteger, ForeignKey(f"{User.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"),
+#                         index=True)
+#     status_id = Column(Integer, ForeignKey(f"{TicketStatus.__tablename__}.id", onupdate="CASCADE", ondelete="CASCADE"),
+#                        index=True)
+#     created_at = Column(DateTime, server_default=func.now())
+#     updated_at = Column(DateTime, server_default=func.now(), server_onupdate=func.now())
 
 
 class TicketHistory(Base):

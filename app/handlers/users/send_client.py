@@ -22,10 +22,14 @@ router.message.filter(F.chat.type == 'private', CommonFilter())
 router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
 
 
-@router.message(Text(text='Моя статистика 📊'))
+@router.message(Text(text='Мои клиенты 📊'))
 async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: User):
-    res = await get_user_statistic(db=db_session, user=user)
-    await msg.answer_document(document=res.FSI)
+    result = await get_user_statistic(db=db_session, user=user)
+    await msg.answer_document(document=result.FSI)
+
+@router.message(Text(text='Отклоненные клиенты 🛑'))
+async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: User):
+    result = await get_rejected_clients(db=db_session, user=user)
 
 
 @router.message(Text(text='Отправить клиента ▶️'))
@@ -39,26 +43,30 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
     ticket_id = re.search('\d+$', msg.text)
     if not ticket_id:
         await msg.answer('Не нашел ID клиента в сообщении. Проверь, пожалуйста, чтобы все было верно.')
-    else:
-        ticket_id = int(ticket_id.group(0))
-        async with db_session() as session:
+        return
+    ticket_id = int(ticket_id.group(0))
+    async with db_session() as session:
+        try:
             ticket = await session.get(Ticket, ticket_id)
-            if ticket:
-                await msg.answer('Этот клиент уже был загружен на проверку.')
-                return
-        await state.update_data(ticket_id=ticket_id)
-        ticket: TicketContainer = await validate_ticket(db_session, ticket_id, user)
-        if isinstance(ticket, str):
-            await msg.answer(ticket)
-        else:
-            await state.update_data(ticket_info=ticket)
-            await msg.answer(f'Клиент: <b>{ticket["client"]["fullname"]}</b>\n'
-                             f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_id)}\n'
-                             f'Отправляется на проверку.\n\nНажимая кнопку "Подтвердить", ты '
-                             f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
-                             f'Ознакомиться с условиями по отправленным можно через команду <b>/help</b>',
-                             reply_markup=await get_validate_keyboard())
-            await state.set_state(FSMTicket.confirm)
+        except Exception as e:
+            logger.error(e)
+            await msg.answer('Ошибка базы данных. Пожалуйста, попробуй снова.')
+        if ticket:
+            await msg.answer('Этот клиент уже был загружен на проверку.')
+            return
+    await state.update_data(ticket_id=ticket_id)
+    ticket: TicketContainer = await validate_ticket(db_session, ticket_id, user)
+    if isinstance(ticket, str):
+        await msg.answer(ticket)
+    else:
+        await state.update_data(ticket_info=ticket)
+        await msg.answer(f'Клиент: <b>{ticket["client"]["fullname"]}</b>\n'
+                         f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_id)}\n'
+                         f'Отправляется на проверку.\n\nНажимая кнопку "Подтвердить", ты '
+                         f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
+                         f'Ознакомиться с условиями по отправленным можно через команду <b>/help</b>',
+                         reply_markup=await get_validate_keyboard())
+        await state.set_state(FSMTicket.confirm)
 
 
 @router.callback_query(FSMTicket.confirm, SendCallback.filter(F.param == 'validate'))

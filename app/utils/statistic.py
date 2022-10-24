@@ -5,12 +5,13 @@ import pandas as pd
 from datetime import date
 from pathlib import Path
 
-from sqlalchemy import select, func, or_
+from loguru import logger
+from sqlalchemy import select, func, or_, and_, null, case
 from sqlalchemy.orm import sessionmaker
 
 from aiogram import types
 
-from app.models.doc import Ticket, TicketStatus, User
+from app.models.doc import Ticket, TicketStatus, User, TicketHistory
 
 
 class StatisticContainer(NamedTuple):
@@ -50,3 +51,26 @@ async def get_user_statistic(db: sessionmaker, user: User):
     filepath = Path(filename)
     buf = types.BufferedInputFile(xlsx_data, filename=filename)
     return StatisticContainer(FSI=buf, filepath=filepath)
+
+
+async def get_rejected_clients(db: sessionmaker, user: User):
+    stmt = select(Ticket.id, Ticket.comment). \
+        join(TicketHistory). \
+        where(
+        and_(
+            Ticket.status_id == 4,
+            or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)
+        )
+    ).\
+        group_by(Ticket.id, Ticket.comment).\
+        having(func.SUM(case([TicketHistory.status_id == 5, 1], else_=0)) < 2)
+    print(stmt)
+    async with db() as session:
+        try:
+            query = await session.execute(stmt)
+            tickets = query.mappings().fetchall()
+        except Exception as e:
+            logger.error(e)
+            return 'Ошибка базы данных. Пожалуйста, попробуй снова.'
+
+    return tickets
