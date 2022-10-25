@@ -58,7 +58,7 @@ async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_sess
                 comment=appeal_text
             )
             session.add(ticket)
-            await session.merge(Ticket(id=int(ticket_id), status_id=5))
+            await session.merge(Ticket(id=int(ticket_id), status_id=5, updated_at=func.now()))
             await session.commit()
         except Exception as e:
             logger.error(e)

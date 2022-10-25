@@ -5,7 +5,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramUnauthorizedError, Te
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import sessionmaker
 
 from app.filters.common import CheckerFilter
@@ -46,7 +46,7 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
                         status_id=2
                     )
                 )
-                await session.merge(Ticket(id=callback_data.value, status_id=2))
+                await session.merge(Ticket(id=callback_data.value, status_id=2, updated_at=func.now()))
 
             except Exception as e:
                 logger.error(e)
@@ -103,7 +103,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             )
 
             session.add(ticket)
-            await session.merge(Ticket(id=int(ticket_id), status_id=choice))
+            await session.merge(Ticket(id=int(ticket_id), status_id=choice, updated_at=func.now()))
             await session.commit()
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} '
