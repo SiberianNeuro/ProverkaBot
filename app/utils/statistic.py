@@ -33,7 +33,7 @@ async def get_user_statistic(db: sessionmaker, user: User):
     stmt = select(
         func.CONCAT("https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/", Ticket.id).label('Ссылка'),
         TicketStatus.name.label('Статус'),
-        Ticket.created_at.label('Дата передачи клиента')
+        Ticket.created_at.label('Дата передачи клиента'),
         Ticket.updated_at.label('Дата последнего изменения')
     ).join(TicketStatus).where(or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id))
     async with db() as session:
