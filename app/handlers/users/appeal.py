@@ -3,6 +3,7 @@ from contextlib import suppress
 from aiogram import Router, F, Bot, types
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
+from aiogram.types import ForceReply
 from loguru import logger
 from sqlalchemy import select, func, and_
 
@@ -33,9 +34,9 @@ async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_da
                 with suppress(TelegramBadRequest):
                     await call.message.edit_text('Количество апелляций по этому клиенту превышено.', reply_markup=None)
                     return
-    with suppress(TelegramBadRequest):
-        await call.message.edit_text('Пожалуйста, напиши обоснование к апелляции, и я отправлю её на проверку.',
-                                     reply_markup=None)
+    await call.message.delete()
+    await call.message.answer('Пожалуйста, напиши обоснование к апелляции (не более 4000 символов).',
+                              reply_markup=ForceReply(input_field_placeholder='Текст апелляции'))
     await state.update_data(ticket_id=callback_data.ticket_id)
     await state.set_state(Appeal.comment)
 

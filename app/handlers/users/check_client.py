@@ -4,6 +4,7 @@ from aiogram import Router, types, F, Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramUnauthorizedError, TelegramForbiddenError
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
+from aiogram.types import ForceReply
 from loguru import logger
 from sqlalchemy import select, func
 from sqlalchemy.orm import sessionmaker
@@ -75,8 +76,8 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
 async def get_check_choice(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback):
     await state.update_data(ticket_id=callback_data.ticket_id, choice=callback_data.choice)
     answer_text = 'Решение принял. Пожалуйста, оставь комментарий по проверке.'
-    with suppress(TelegramBadRequest):
-        await call.message.edit_text(answer_text, reply_markup=None)
+    await call.message.delete()
+    await call.message.answer(answer_text, reply_markup=ForceReply(input_field_placeholder='Твой комментарий по проверке'))
     await state.set_state(Checking.comment)
 
 

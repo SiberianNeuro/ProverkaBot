@@ -1,8 +1,9 @@
+import asyncio
 import re
 from contextlib import suppress
 
 from aiogram import Router, types, F, Bot
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
 from aiogram.filters import Text
 from aiogram.fsm.context import FSMContext
 from loguru import logger
@@ -35,11 +36,15 @@ async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: Us
         await msg.answer(result)
     else:
         for res in result:
-            await msg.answer(f'<b>Клиент</b>:\n'
-                             f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{res["id"]}\n'
-                             f'<b>Комментарий:</b>\n'
-                             f'{res["comment"] if res["comment"] else "-"}',
-                             reply_markup=await get_answer_keyboard(ticket_id=res['id']))
+            try:
+                await msg.answer(f'<b>Клиент</b>:\n'
+                                 f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{res["id"]}\n'
+                                 f'<b>Комментарий:</b>\n'
+                                 f'{res["comment"] if res["comment"] else "-"}',
+                                 reply_markup=await get_answer_keyboard(ticket_id=res['id']))
+            except TelegramRetryAfter as e:
+                logger.error(f'Floodcontrol - {e.retry_after}')
+                await asyncio.sleep(e.retry_after)
 
 
 @router.message(Text(text='Отправить клиента ▶️'))
