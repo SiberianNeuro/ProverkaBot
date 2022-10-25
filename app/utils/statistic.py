@@ -56,7 +56,8 @@ async def get_user_statistic(db: sessionmaker, user: User):
 
 async def get_rejected_clients(db: sessionmaker, user: User):
     in_query = select(Ticket.id, Ticket.comment, func.COUNT(TicketHistory.status_id).label('c')).\
-        filter(Ticket.status_id == 4, or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)).\
+        filter(Ticket.status_id == 4, or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id),
+               TicketHistory.status_id == 5).\
         join(TicketHistory).group_by(Ticket.id, Ticket.comment)
     in_query = in_query.cte('tickets')
     out_query = select(in_query).filter(in_query.c.c < 2)

@@ -34,6 +34,8 @@ async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: Us
     result = await get_rejected_clients(db=db_session, user=user)
     if isinstance(result, str):
         await msg.answer(result)
+    elif not result:
+        await msg.answer('Таких клиентов я не нашел.')
     else:
         for res in result:
             try:

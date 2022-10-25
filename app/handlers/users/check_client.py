@@ -104,7 +104,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             )
 
             session.add(ticket)
-            await session.merge(Ticket(id=int(ticket_id), status_id=choice, updated_at=func.now()))
+            await session.merge(Ticket(id=int(ticket_id), status_id=choice, comment=msg.text, updated_at=func.now()))
             await session.commit()
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} '
