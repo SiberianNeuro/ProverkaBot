@@ -1,4 +1,3 @@
-import os
 import re
 from contextlib import suppress
 
@@ -27,14 +26,16 @@ async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: Use
     result = await get_user_statistic(db=db_session, user=user)
     await msg.answer_document(document=result.FSI)
 
-@router.message(Text(text='Отклоненные клиенты 🛑'))
-async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: User):
-    result = await get_rejected_clients(db=db_session, user=user)
+
+# @router.message(Text(text='Отклоненные клиенты 🛑'))
+# async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: User):
+#     result = await get_rejected_clients(db=db_session, user=user)
 
 
 @router.message(Text(text='Отправить клиента ▶️'))
 async def start_sending(msg: types.Message, state: FSMContext):
-    await msg.answer('Пришли мне ссылку или ID клиента.')
+    await msg.answer('Пришли мне ссылку или ID клиента. Если передумаешь, либо что-то будет неверно,'
+                     ' напиши "отмена".')
     await state.set_state(FSMTicket.id)
 
 
@@ -102,7 +103,7 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 chat_id=config.misc.checking_group,
                 text=f'🟡<b>Новый клиент на проверку</b>:\n'
                      f'{ticket_info["client"]["fullname"]}\n'
-                     f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n'
+                     f'{"https://clinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n'
                      f'Отправитель:\n{user.fullname} | @{call.from_user.username}',
                 reply_markup=await get_check_keyboard(ticket_info["client"]["id"], user.id)
             )

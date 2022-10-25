@@ -56,12 +56,12 @@ async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMConte
                          ' Пожалуйста, проверь, правильно ли ты заполнил имя.')
         return
     elif len(temp_users) > 1:
-            await state.update_data(temp_users=temp_users)
-            text = 'Я нашел в "Инфоклинике" следующие аккаунты:\n\n'
-            for num, user in enumerate(temp_users, 1):
-                text += f'<b>{num}. {user["fullname"]}</b>\nДолжность: {user["name"]}'
-            text += '\n\nПожалуйста, выбери, какой из них верный'
-            await msg.answer(text=text, reply_markup=await get_confirm(temp_users))
+        await state.update_data(temp_users=temp_users)
+        text = 'Я нашел в "Инфоклинике" следующие аккаунты:\n\n'
+        for num, user in enumerate(temp_users, 1):
+            text += f'<b>{num}. {user["fullname"]}</b>\nДолжность: {user["name"]}'
+        text += '\n\nПожалуйста, выбери, какой из них верный'
+        await msg.answer(text=text, reply_markup=await get_confirm(temp_users))
     else:
         await state.update_data(temp_users=temp_users[0])
         text = f'Нашел в "Инфоклинике" аккаунт:\n\n' \
@@ -126,14 +126,14 @@ async def finish_registration(call: types.CallbackQuery, state: FSMContext, db_s
     user_data = raw_data['temp_users']
     is_checking = True if callback_data.value > 11 else False
     user = User(
-                id=call.from_user.id,
-                fullname=user_data['fullname'],
-                kazarma_id=user_data['id'],
-                role_id=user_data['role_id'],
-                role_name=user_data['name'],
-                cluster_id=callback_data.value,
-                is_checking=is_checking
-            )
+        id=call.from_user.id,
+        fullname=user_data['fullname'],
+        kazarma_id=user_data['id'],
+        role_id=user_data['role_id'],
+        role_name=user_data['name'],
+        cluster_id=callback_data.value,
+        is_checking=is_checking
+    )
     async with db_session() as session:
         await session.merge(user)
         await session.commit()
@@ -151,7 +151,13 @@ async def finish_registration(call: types.CallbackQuery, state: FSMContext, db_s
             f'User {user_data["fullname"]} completely registered as checker user'
         )
     else:
-        await call.message.answer('Ты - отправляющий', reply_markup=await keyboard_generator(user))
+        await call.message.answer('Ты - отправляющий.\n'
+                                  'Что я умею:\n'
+                                  'Нажми <b>"Отправить клиента ▶️"</b>, чтобы загрузить клиента, '
+                                  'подходящего под условия, я помогу тебе в процессе загрузки\n'
+                                  'Кнопка <b>"Отклоненные клиенты 🔻"</b> вернет тебе список отклоненных клиентов\n'
+                                  'Кнопка <b>"Моя статистика 📊"</b> вернет тебе Excel-табличку со списком твоих клиентов '
+                                  'и их текущими статусами', reply_markup=await keyboard_generator(user))
         logger.opt(lazy=True).log(
             'REGISTRATION',
             f'User {user_data["fullname"]} completely registered as common user'

@@ -83,7 +83,7 @@ async def get_check_choice(call: types.CallbackQuery, state: FSMContext, callbac
 @router.message(Checking.comment, F.chat.type == 'private')
 async def get_check_comment(msg: types.Message, state: FSMContext, db_session: sessionmaker, user: User,
                             bot: Bot):
-    if not isinstance(msg.content_type, types.ContentType.TEXT):
+    if msg.content_type == 'text':
         await msg.answer('Я принимаю только текстовые сообщения, без файлов, фотографий и прочего.')
         return
     ticket_info = await state.get_data()
