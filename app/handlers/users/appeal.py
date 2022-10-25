@@ -43,7 +43,7 @@ async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_da
 @router.message(Appeal.comment)
 async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_session: sessionmaker, config: Config,
                       bot: Bot):
-    if not isinstance(msg.content_type, types.ContentType.TEXT):
+    if msg.content_type != 'text':
         await msg.answer('Я принимаю только текстовые сообщения, без файлов, фотографий и прочего.')
         return
     state_data = await state.get_data()
