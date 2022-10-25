@@ -9,10 +9,11 @@ from loguru import logger
 from sqlalchemy.orm import sessionmaker
 
 from app.filters.common import CommonFilter
+from app.keyboards.checking_kb import get_answer_keyboard
 from app.models.doc import User, Ticket, TicketHistory
 from app.services.config import Config
 from app.utils.states import FSMTicket
-from app.utils.statistic import get_user_statistic
+from app.utils.statistic import get_user_statistic, get_rejected_clients
 from app.utils.validator import validate_ticket, TicketContainer
 from app.keyboards.load_kb import get_validate_keyboard, SendCallback, get_check_keyboard
 
@@ -27,9 +28,18 @@ async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: Use
     await msg.answer_document(document=result.FSI)
 
 
-# @router.message(Text(text='Отклоненные клиенты 🛑'))
-# async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: User):
-#     result = await get_rejected_clients(db=db_session, user=user)
+@router.message(Text(text='Возможные апелляции 🛑'))
+async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: User):
+    result = await get_rejected_clients(db=db_session, user=user)
+    if isinstance(result, str):
+        await msg.answer(result)
+    else:
+        for res in result:
+            await msg.answer(f'<b>Клиент</b>:\n'
+                             f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{res["id"]}\n'
+                             f'<b>Комментарий:</b>\n'
+                             f'{res["comment"] if res["comment"] else "-"}',
+                             reply_markup=await get_answer_keyboard(ticket_id=res['id']))
 
 
 @router.message(Text(text='Отправить клиента ▶️'))

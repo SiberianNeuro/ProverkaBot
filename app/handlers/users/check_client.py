@@ -123,7 +123,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
                     chat_id=u,
                     text=f'Клиент отклонен 😒:\n{ticket.link}\n\n'
                          f'<i>Комментарий проверяющего</i>:\n{msg.text}',
-                    reply_markup=await get_answer_keyboard(ticket_id, choice)
+                    reply_markup=await get_answer_keyboard(ticket_id)
                 )
             except (TelegramUnauthorizedError, TelegramForbiddenError):
                 continue

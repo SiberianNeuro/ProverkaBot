@@ -55,23 +55,37 @@ async def get_user_statistic(db: sessionmaker, user: User):
 
 
 async def get_rejected_clients(db: sessionmaker, user: User):
-    stmt = select(Ticket.id, Ticket.comment). \
-        join(TicketHistory). \
-        where(
-        and_(
-            Ticket.status_id == 4,
-            or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)
-        )
-    ).\
-        group_by(Ticket.id, Ticket.comment).\
-        having(func.SUM(case([TicketHistory.status_id == 5, 1], else_=0)) < 2)
-    print(stmt)
+    in_query = select(Ticket.id, Ticket.comment, func.COUNT(TicketHistory.status_id).label('c')).\
+        filter(Ticket.status_id == 4, or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)).\
+        join(TicketHistory).group_by(Ticket.id, Ticket.comment)
+    in_query = in_query.cte('tickets')
+    out_query = select(in_query).filter(in_query.c.c < 2)
     async with db() as session:
         try:
-            query = await session.execute(stmt)
-            tickets = query.mappings().fetchall()
+            res = await session.execute(out_query)
+            re = res.mappings().fetchall()
+            return re
         except Exception as e:
             logger.error(e)
-            return 'Ошибка базы данных. Пожалуйста, попробуй снова.'
+            return "Ошибка базы данных. Пожалуйста, попробуй снова."
 
-    return tickets
+    # stmt = select(Ticket.id, Ticket.comment). \
+    #     join(TicketHistory). \
+    #     where(
+    #     and_(
+    #         Ticket.status_id == 4,
+    #         or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)
+    #     )
+    # ).\
+    #     group_by(Ticket.id, Ticket.comment).\
+    #     having(func.SUM(case([TicketHistory.status_id == 5, 1], else_=0)) < 2)
+    # print(stmt)
+    # async with db() as session:
+    #     try:
+    #         query = await session.execute(stmt)
+    #         tickets = query.mappings().fetchall()
+    #     except Exception as e:
+    #         logger.error(e)
+    #         return 'Ошибка базы данных. Пожалуйста, попробуй снова.'
+    #
+    # return tickets

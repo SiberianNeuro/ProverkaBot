@@ -22,10 +22,7 @@ async def get_choice_keyboard(ticket_id: Union[str, int]) -> InlineKeyboardMarku
     return keyboard.as_markup()
 
 
-async def get_answer_keyboard(ticket_id: Union[str, int], choice: int) -> Union[InlineKeyboardMarkup, None]:
-    if choice == 3:
-        return None
-
+async def get_answer_keyboard(ticket_id: Union[str, int]) -> Union[InlineKeyboardMarkup, None]:
     keyboard = InlineKeyboardBuilder()
     keyboard.button(
         text='Подать апелляцию', callback_data=CheckingCallback(param='appeal', ticket_id=ticket_id).pack()

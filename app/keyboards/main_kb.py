@@ -20,7 +20,7 @@ async def keyboard_generator(user: User) -> Union[ReplyKeyboardMarkup, ReplyKeyb
                 [
                     KeyboardButton(text='Отправить клиента ▶️'),
                     KeyboardButton(text='Мои клиенты 📊'),
-                    #KeyboardButton(text='Отклоненные клиенты 🛑')
+                    KeyboardButton(text='Возможные апелляции 🛑')
                 ]
             ],
             resize_keyboard=True
