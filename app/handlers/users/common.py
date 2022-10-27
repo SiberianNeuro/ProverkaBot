@@ -1,22 +1,20 @@
-from aiogram import types, F
+import asyncio
 
-from aiogram import Router
+from aiogram import Router, types, F, Bot
+from aiogram.exceptions import TelegramRetryAfter
 from aiogram.filters import CommandStart, Command, Text
 from aiogram.fsm.context import FSMContext
-from sqlalchemy import select
 
 from app.keyboards.main_kb import keyboard_generator
 from app.keyboards.register_kb import start_button
 from app.models.doc import User
-from app.models.kazarma import KazarmaUser
-from app.utils.statistic import get_rejected_clients
 
 router = Router()
 router.message.filter(F.chat.type == "private")
 
 
 @router.message(CommandStart())
-async def start(msg: types.Message, user: User, state: FSMContext, db_session):
+async def start(msg: types.Message, user: User, state: FSMContext, bot: Bot, config):
     current_state = await state.get_state()
     if current_state and current_state.startswith('Checking'):
         await msg.answer('Сначала тебе нужно закончить проверку заявки.')
@@ -28,7 +26,14 @@ async def start(msg: types.Message, user: User, state: FSMContext, db_session):
                          'Вижу, что ты еще не регистрировался, давай это исправлять!',
                          reply_markup=await start_button())
     else:
-        await get_rejected_clients(db_session, user)
+        message = await bot.send_message(chat_id=config.misc.checking_group, text='0')
+        for i in range(1, 100):
+            try:
+                await bot.edit_message_text(text=str(i), chat_id=config.misc.checking_group, message_id=message.message_id)
+            except TelegramRetryAfter as e:
+                print('timeout ', e.retry_after)
+            finally:
+                await asyncio.sleep(1)
         await msg.answer(f'Привет, {user.fullname.split()[1]} 🖖\n'
                          f'Для получения помощи напиши /help', reply_markup=await keyboard_generator(user))
 
