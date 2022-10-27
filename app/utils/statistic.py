@@ -33,7 +33,7 @@ async def get_user_statistic(db: sessionmaker, user: User):
     stmt = select(
         func.CONCAT("https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/", Ticket.id).label('Ссылка'),
         TicketStatus.name.label('Статус'),
-        Ticket.created_at.label('Дата передачи клиента'),
+        Ticket.created_at.label('Дата подачи клиента'),
         Ticket.updated_at.label('Дата последнего изменения')
     ).join(TicketStatus).where(or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id))
     async with db() as session:
@@ -41,10 +41,8 @@ async def get_user_statistic(db: sessionmaker, user: User):
         clients = result.mappings().fetchall()
         await session.commit()
 
-    df = pd.DataFrame(data=clients, columns=["Ссылка", "Статус", "Дата последнего изменения"])
+    df = pd.DataFrame(data=clients, columns=["Ссылка", "Статус", "Дата подачи клиента", "Дата последнего изменения"])
     df.index += 1
-    print(len(df.index))
-    print(df.loc[df['Статус'] == 'залупа', 'Статус'].count())
 
     xlsx_data = await get_buffered_file(df)
 
@@ -55,9 +53,12 @@ async def get_user_statistic(db: sessionmaker, user: User):
 
 
 async def get_rejected_clients(db: sessionmaker, user: User):
-    in_query = select(Ticket.id, Ticket.comment, func.COUNT(TicketHistory.status_id).label('c')).\
-        filter(Ticket.status_id == 4, or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id),
-               TicketHistory.status_id == 5).\
+    in_query = select(
+        Ticket.id,
+        Ticket.comment,
+        func.COUNT(case((TicketHistory.status_id == 5, 1))).label('c')
+    ).\
+        filter(Ticket.status_id == 4, or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)).\
         join(TicketHistory).group_by(Ticket.id, Ticket.comment)
     in_query = in_query.cte('tickets')
     out_query = select(in_query).filter(in_query.c.c < 2)

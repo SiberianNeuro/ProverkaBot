@@ -23,10 +23,14 @@ router.callback_query.filter(CheckerFilter())
 
 @router.callback_query(F.message.chat.type.in_({"group", "supergroup"}), SendCallback.filter(F.param == 'check'))
 async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db_session: sessionmaker,
-                                callback_data: SendCallback, user: User, bot: Bot):
-    await state.clear()
+                                callback_data: SendCallback, user: User, bot: Bot, config):
+    group_state = await state.storage.get_state(
+        bot,
+        key=StorageKey(bot_id=bot.id, chat_id=config.misc.checking_group, user_id=call.from_user.id)
+    )
     current_state = await state.get_state()
-    if current_state and current_state.startswith('Checking'):
+    if current_state and current_state.startswith('Checking') \
+            and group_state and group_state.startswith('Checking'):
         await call.answer('Сначала тебе нужно закончить проверку текущей заявки.', show_alert=True)
         return
     answer_text = ''
@@ -124,6 +128,11 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
         bot, key=StorageKey(bot_id=bot.id, chat_id=config.misc.checking_group, user_id=msg.from_user.id),
         state=None
     )
+    await state.storage.set_data(bot,
+                                 StorageKey(bot_id=bot.id, chat_id=config.misc.checking_group,
+                                            user_id=msg.from_user.id),
+                                 data={}
+                                 )
     if choice == 4:
         for u in users:
             try:

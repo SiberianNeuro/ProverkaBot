@@ -1,4 +1,5 @@
 from contextlib import suppress
+from typing import Union
 
 from aiogram import Router, F, types, Bot
 from aiogram.fsm.context import FSMContext
@@ -79,44 +80,54 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
         with suppress(TelegramBadRequest):
             await call.message.edit_text('Тогда прошу тебя проверить ФИО и попробовать еще раз.', reply_markup=None)
         await state.set_state(Register.fullname)
-    else:
-        user_data = await state.get_data()
-        user_data: list | dict = user_data['temp_users']
-        if isinstance(user_data, list):
-            for data in user_data:
-                if data['id'] == callback_data.value:
-                    user_data = data
-                    break
-            await state.update_data(temp_users=user_data)
-        if user_data['role_id'] in (5, 17, 29, 30):
-            async with db_session() as session:
-                user = session.add(
-                    User(
-                        id=call.from_user.id,
-                        fullname=user_data['fullname'],
-                        kazarma_id=user_data['id'],
-                        role_id=user_data['role_id'],
-                        role_name=user_data['name'],
-                        cluster_id=18,
-                        is_admin=True,
-                    )
-                )
-
+        return
+    user_data = await state.get_data()
+    user_data: Union[list, dict] = user_data['temp_users']
+    if isinstance(user_data, list):
+        for data in user_data:
+            if data['id'] == callback_data.value:
+                user_data = data
+                break
+        await state.update_data(temp_users=user_data)
+    if user_data['role_id'] in (5, 17, 29, 30):
+        async with db_session() as session:
+            result = await session.execute(select(User).filter(User.kazarma_id == user_data['role_id']))
+            user = result.first()
+            if user:
+                with suppress(TelegramBadRequest):
+                    await call.message.edit_text('Такой пользователь уже существует. '
+                                                 'Напиши /start, чтобы начать заново',
+                                                 reply_markup=None)
+                await state.clear()
                 await session.commit()
-                await session.refresh(user)
-            with suppress(TelegramBadRequest):
-                await call.message.edit_text(f'Вы определены как администратор. '
-                                             f'Добро пожаловать, {user_data["fullname"].split()[1]}',
-                                             reply_markup=None)
-            logger.opt(lazy=True).log(
-                'REGISTRATION',
-                f'User {user_data["fullname"]} completely registered as admin'
+                return
+            user = session.add(
+                User(
+                    id=call.from_user.id,
+                    fullname=user_data['fullname'],
+                    kazarma_id=user_data['id'],
+                    role_id=user_data['role_id'],
+                    role_name=user_data['name'],
+                    cluster_id=18,
+                    is_admin=True,
+                )
             )
-        else:
-            with suppress(TelegramBadRequest):
-                await call.message.answer('Теперь выбери свою команду:',
-                                          reply_markup=await get_clusters_keyboard(db_session))
-            await state.set_state(Register.cluster)
+
+            await session.commit()
+            await session.refresh(user)
+        with suppress(TelegramBadRequest):
+            await call.message.edit_text(f'Вы определены как администратор. '
+                                         f'Добро пожаловать, {user_data["fullname"].split()[1]}',
+                                         reply_markup=None)
+        logger.opt(lazy=True).log(
+            'REGISTRATION',
+            f'User {user_data["fullname"]} completely registered as admin'
+        )
+    else:
+        with suppress(TelegramBadRequest):
+            await call.message.answer('Теперь выбери свою команду:',
+                                      reply_markup=await get_clusters_keyboard(db_session))
+        await state.set_state(Register.cluster)
 
 
 @router.callback_query(Register.cluster, RegCallback.filter(F.param == "cluster"))

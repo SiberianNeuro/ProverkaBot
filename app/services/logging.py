@@ -36,6 +36,7 @@ def setup():
     logger.level("REGISTRATION", no=33, color="<green>")
     logger.level("CHECK", no=33, color="<cyan>")
     logger.level("APPEAL", no=33, color="<yellow>")
+    logger.level("CASSATION", no=33, color="<yellow>")
     logger.add('logs/warnings/logfile_{time:DD_MM_YYYY}.log', rotation='8:30',
                format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}",
                colorize=False, filter=lambda record: record['level'].name == "ERROR")
@@ -43,9 +44,9 @@ def setup():
                format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}",
                colorize=False, filter=lambda record: record['level'].name == "INFO")
     logger.add('logs/registration_logfile.log',
-               format="{time:DD-MM-YYYY at HH:mm:ss}: {level}:  {message}",
+               format="{time:DD-MM-YYYY at HH:mm:ss}: {message}",
                colorize=False, filter=lambda record: record['level'].name == "REGISTRATION")
     logger.add('logs/process/logfile_{time:DD_MM_YYYY}.log', rotation='8:30',
-               format="{time:DD-MM-YYYY at HH:mm:ss}: {level}: [{module}({line})]: {message}",
-               colorize=False, filter=lambda record: record['level'].name in ("CHECK", "SEND", "APPEAL"))
+               format="{time:DD-MM-YYYY at HH:mm:ss}: {message}",
+               colorize=False, filter=lambda record: record['level'].name in ("CHECK", "SEND", "APPEAL", "CASSATION"))
     logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO)
