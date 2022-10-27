@@ -1,4 +1,5 @@
 from contextlib import suppress
+from datetime import datetime
 
 from aiogram import Router, types, F, Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramUnauthorizedError, TelegramForbiddenError
@@ -33,12 +34,12 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
         ticket: Ticket = await session.get(Ticket, callback_data.value)
         type_ticket = 'Апелляция' if ticket.status_id == 5 else 'Заявка'
         if ticket.status_id == 2:
-            answer_text = f'{type_ticket} <a href="{ticket.link}">{ticket.id}</a> уже на проверке'
+            answer_text = f'❕ <u>уже на проверке.</u>'
         elif ticket.status_id in (3, 4):
-            answer_text = f'{type_ticket} <a href="{ticket.link}">{ticket.id}</a> проверена'
+            answer_text = f'❕ <u>уже проверена:</u> {"одобрена" if ticket.status_id == 3 else "отклонена"}.'
         elif ticket.status_id in (1, 5):
-            answer_text = f'{type_ticket} <a href="{ticket.link}">{ticket.id}</a> принята ' \
-                          f'в работу проверяющим @{call.from_user.username}'
+            answer_text = f'🔄 <i>Принята в работу проверяющим</i> @{call.from_user.username}\n' \
+                          f'Начало проверки: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>'
             try:
                 session.add(
                     TicketHistory(
@@ -55,6 +56,8 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
                 await session.rollback()
                 return
             await state.update_data(author_id=callback_data.user_id)
+            with suppress(TelegramBadRequest):
+                await call.message.edit_text(call.message.html_text + '\n\n' + answer_text, reply_markup=None)
             await bot.send_message(
                 call.from_user.id,
                 f'Начнем проверку клиента.\nСсылка: {ticket.link}\n'
@@ -68,8 +71,6 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             )
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} started checking client (ID: {callback_data.value})')
-        with suppress(TelegramBadRequest):
-            await call.message.edit_text(answer_text, reply_markup=None)
 
 
 @router.callback_query(CheckingCallback.filter(F.param == "choice"), Checking.choice)
@@ -77,7 +78,8 @@ async def get_check_choice(call: types.CallbackQuery, state: FSMContext, callbac
     await state.update_data(ticket_id=callback_data.ticket_id, choice=callback_data.choice)
     answer_text = 'Решение принял. Пожалуйста, оставь комментарий по проверке.'
     await call.message.delete()
-    await call.message.answer(answer_text, reply_markup=ForceReply(input_field_placeholder='Твой комментарий по проверке'))
+    await call.message.answer(answer_text,
+                              reply_markup=ForceReply(input_field_placeholder='Твой комментарий по проверке'))
     await state.set_state(Checking.comment)
 
 

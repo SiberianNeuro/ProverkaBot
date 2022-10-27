@@ -1,7 +1,9 @@
+import asyncio
 from contextlib import suppress
+from datetime import datetime
 
 from aiogram import Router, F, Bot, types
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ForceReply
 from loguru import logger
@@ -66,11 +68,23 @@ async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_sess
             await msg.answer('Произошла ошибка при добавлении в базу данных. Пожалуйста, попробуй снова.')
             await session.rollback()
             return
+    successfull = False
+    await state.clear()
+    while not successfull:
+        try:
+            await bot.send_message(
+                chat_id=config.misc.checking_group,
+                text=f'🔴 <b>Апелляция по клиенту</b>\n'
+                     f'{ticket.link}\n\n'
+                     f'<u>Кто отправил:</u>\n{user.fullname} @{msg.from_user.username}\n'
+                     f'Когда отправил: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>\n\n'
+                     f'<i>Обоснование:</i>\n{appeal_text}',
+                reply_markup=await get_check_keyboard(ticket_id, user.id)
+            )
+            logger.opt(lazy=True).log('APPEAL', f'User {user.fullname} successfully sent client (ID: {ticket.id})')
+            successfull = True
+        except TelegramRetryAfter as e:
+            await asyncio.sleep(e.retry_after)
 
-    await bot.send_message(
-        chat_id=config.misc.checking_group,
-        text=f'🔴 <b>Апелляция по клиенту</b>\n'
-             f'{ticket.link}\n\n'
-             f'Обоснование:\n{appeal_text}',
-        reply_markup=await get_check_keyboard(ticket_id, user.id)
-    )
+
+

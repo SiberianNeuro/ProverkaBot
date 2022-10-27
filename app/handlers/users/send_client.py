@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import re
 from contextlib import suppress
 
@@ -116,13 +117,21 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n'
                 f'Отправлен на проверку.', reply_markup=None
             )
-            await bot.send_message(
-                chat_id=config.misc.checking_group,
-                text=f'🟡<b>Новый клиент на проверку</b>:\n'
-                     f'{ticket_info["client"]["fullname"]}\n'
-                     f'{"https://clinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n'
-                     f'Отправитель:\n{user.fullname} | @{call.from_user.username}',
-                reply_markup=await get_check_keyboard(ticket_info["client"]["id"], user.id)
-            )
-        logger.opt(lazy=True).log('SEND', f'User {user.fullname} successfully sent client (ID: {ticket.id})')
         await state.clear()
+        successfull = False
+        while not successfull:
+            try:
+                await bot.send_message(
+                    chat_id=config.misc.checking_group,
+                    text=f'🟡<b>Новый клиент на проверку</b>:\n'
+                         f'{ticket_info["client"]["fullname"]}\n'
+                         f'{"https://clinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n\n'
+                         f'<u>Кто отправил:</u>\n{user.fullname} @{call.from_user.username}\n'
+                         f'Когда отправил: <b>{datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>',
+                    reply_markup=await get_check_keyboard(ticket_info["client"]["id"], user.id)
+                )
+                logger.opt(lazy=True).log('SEND', f'User {user.fullname} successfully sent client (ID: {ticket.id})')
+                successfull = True
+            except TelegramRetryAfter as e:
+                await asyncio.sleep(e.retry_after)
+
