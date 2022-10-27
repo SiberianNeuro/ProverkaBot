@@ -26,14 +26,6 @@ async def start(msg: types.Message, user: User, state: FSMContext, bot: Bot, con
                          'Вижу, что ты еще не регистрировался, давай это исправлять!',
                          reply_markup=await start_button())
     else:
-        message = await bot.send_message(chat_id=config.misc.checking_group, text='0')
-        for i in range(1, 100):
-            try:
-                await bot.edit_message_text(text=str(i), chat_id=config.misc.checking_group, message_id=message.message_id)
-            except TelegramRetryAfter as e:
-                print('timeout ', e.retry_after)
-            finally:
-                await asyncio.sleep(1)
         await msg.answer(f'Привет, {user.fullname.split()[1]} 🖖\n'
                          f'Для получения помощи напиши /help', reply_markup=await keyboard_generator(user))
 

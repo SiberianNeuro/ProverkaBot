@@ -65,6 +65,7 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
                 f' "Одобрить" или "Отклонить".',
                 reply_markup=await get_choice_keyboard(ticket.id)
             )
+            await state.set_state(Checking.choice)
             await state.storage.set_state(
                 bot, key=StorageKey(bot_id=bot.id, chat_id=call.from_user.id, user_id=call.from_user.id),
                 state=Checking.choice
@@ -85,7 +86,7 @@ async def get_check_choice(call: types.CallbackQuery, state: FSMContext, callbac
 
 @router.message(Checking.comment, F.chat.type == 'private')
 async def get_check_comment(msg: types.Message, state: FSMContext, db_session: sessionmaker, user: User,
-                            bot: Bot):
+                            bot: Bot, config):
     if msg.content_type != 'text':
         await msg.answer('Я принимаю только текстовые сообщения, без файлов, фотографий и прочего.')
         return
@@ -119,6 +120,10 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             return
     await msg.answer('Результаты проверки и комментарий сохранены.')
     await state.clear()
+    await state.storage.set_state(
+        bot, key=StorageKey(bot_id=bot.id, chat_id=config.misc.checking_group, user_id=msg.from_user.id),
+        state=None
+    )
     if choice == 4:
         for u in users:
             try:
