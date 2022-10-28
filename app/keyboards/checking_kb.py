@@ -14,10 +14,10 @@ class CheckingCallback(CallbackData, prefix='checking'):
 async def get_choice_keyboard(ticket_id: Union[str, int]) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     keyboard.button(
-        text='Одобрить 👍', callback_data=CheckingCallback(param='choice', ticket_id=ticket_id, choice=3).pack()
+        text='Одобрить 👍', callback_data=CheckingCallback(param='choice', ticket_id=ticket_id, choice=True).pack()
     )
     keyboard.button(
-        text='Отклонить 👎', callback_data=CheckingCallback(param='choice', ticket_id=ticket_id, choice=4).pack()
+        text='Отклонить 👎', callback_data=CheckingCallback(param='choice', ticket_id=ticket_id, choice=False).pack()
     )
     return keyboard.as_markup()
 

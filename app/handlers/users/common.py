@@ -4,6 +4,7 @@ from aiogram import Router, types, F, Bot
 from aiogram.exceptions import TelegramRetryAfter
 from aiogram.filters import CommandStart, Command, Text
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
 
 from app.keyboards.main_kb import keyboard_generator
 from app.keyboards.register_kb import start_button

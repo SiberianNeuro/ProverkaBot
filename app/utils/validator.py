@@ -4,11 +4,12 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import sessionmaker
 
 from app.models.kazarma import KazarmaClient, KazarmaClientUser, KazarmaUser
-from app.models.doc import User
+from app.models.doc import User, Ticket, TicketHistory
 
 
 class TicketInstance(TypedDict):
     id: int
+    fullname: str
     doc_id: int
     law_id: int
 
@@ -19,15 +20,9 @@ class TicketHistoryInstance(TypedDict):
     status_id: int
 
 
-class ClientInstance(TypedDict):
-    id: int
-    fullname: str
-
-
 class TicketContainer(TypedDict):
     ticket: TicketInstance
     ticket_history: TicketHistoryInstance
-    client: ClientInstance
 
 
 async def validate_ticket(
@@ -38,7 +33,7 @@ async def validate_ticket(
     async with db_session() as session:
         temp_client: KazarmaClient = await session.get(KazarmaClient, ticket_id)
         if not temp_client:
-            return "Клиент не найден в базе данных. Пожалуйста, проверь правильность ссылки."
+            return "Клиент не найден в базе данных. Пожалуйста, проверь правильность ссылки или ID."
         # if temp_client.is_send == 0:
         #     return 'Метка "Отправлен в военкомат" не проставлена. Пожалуйста, поставь метку, а затем отправь мне ' \
         #            'ссылку заново.'
@@ -57,10 +52,11 @@ async def validate_ticket(
             elif employee.role_id in (3, 8):
                 doc_id = employee.user_id
     if user.kazarma_id not in (law_id, doc_id):
-        return "Данный клиент закреплен не за тобой. Ты можешь отправлять только собственных клиентов."
+        return "Данный клиент не закреплен за тобой. Ты можешь отправлять только собственных клиентов."
 
     ticket = TicketInstance(
         id=temp_client.id,
+        fullname=temp_client.fullname,
         doc_id=doc_id,
         law_id=law_id,
     )
@@ -69,8 +65,16 @@ async def validate_ticket(
         sender_id=user.id,
         status_id=1
     )
-    client = ClientInstance(
-        id=temp_client.id,
-        fullname=temp_client.fullname
-    )
-    return TicketContainer(ticket=ticket, ticket_history=history_instance, client=client)
+
+    return TicketContainer(ticket=ticket, ticket_history=history_instance)
+
+
+async def validate_appeal(db: sessionmaker, user: User, ticket_id: int):
+    async with db() as session:
+        ticket = await session.get(Ticket, int(ticket_id))
+        if ticket.status_id in (2, 5, 6):
+            return f"Прямо сейчас по клиенту идет проверка.\n" \
+                                         f"Время начала проверки: {ticket.updated_at.isoformat(sep=' ', timespec)}"
+        if ticket.status_id == 12:
+            return 'По этому клиенту подано максимальное количество обжалований.'
+

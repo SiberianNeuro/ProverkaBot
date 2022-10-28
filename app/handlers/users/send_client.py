@@ -36,7 +36,7 @@ async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: Us
     if isinstance(result, str):
         await msg.answer(result)
     elif not result:
-        await msg.answer('Таких клиентов я не нашел.')
+        await msg.answer('Таких клиентов нет')
     else:
         for res in result:
             try:
@@ -70,6 +70,7 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
         except Exception as e:
             logger.error(e)
             await msg.answer('Ошибка базы данных. Пожалуйста, попробуй снова.')
+            return
         if ticket:
             await msg.answer('Этот клиент уже был загружен на проверку.')
             return
@@ -79,8 +80,8 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
         await msg.answer(ticket)
     else:
         await state.update_data(ticket_info=ticket)
-        await msg.answer(f'Клиент: <b>{ticket["client"]["fullname"]}</b>\n'
-                         f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_id)}\n'
+        await msg.answer(f'Клиент: <b>{ticket["ticket"]["fullname"]}</b>\n'
+                         f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_id}\n'
                          f'Отправляется на проверку.\n\nНажимая кнопку "Подтвердить", ты '
                          f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
                          f'Ознакомиться с условиями по отправленным можно через команду <b>/help</b>',
@@ -113,8 +114,8 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 return
         with suppress(TelegramBadRequest):
             await call.message.edit_text(
-                f'Клиент: <b>{ticket_info["client"]["fullname"]}</b>\n'
-                f'{"https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n'
+                f'Клиент: <b>{ticket_info["ticket"]["fullname"]}</b>\n'
+                f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_info["ticket"]["id"]}\n'
                 f'Отправлен на проверку.', reply_markup=None
             )
         await state.clear()
@@ -124,11 +125,11 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 await bot.send_message(
                     chat_id=config.misc.checking_group,
                     text=f'🟡<b>Новый клиент на проверку</b>:\n'
-                         f'{ticket_info["client"]["fullname"]}\n'
-                         f'{"https://clinica.legal-prod.ru/cabinet/v3/#/clients/" + str(ticket_info["client"]["id"])}\n\n'
+                         f'{ticket_info["ticket"]["fullname"]}\n'
+                         f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_info["ticket"]["id"]}\n\n'
                          f'<u>Кто отправил:</u>\n{user.fullname} @{call.from_user.username}\n'
                          f'Когда отправил: <b>{datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>',
-                    reply_markup=await get_check_keyboard(ticket_info["client"]["id"], user.id)
+                    reply_markup=await get_check_keyboard(ticket_info["ticket"]["id"], user.id)
                 )
                 logger.opt(lazy=True).log('SEND', f'User {user.fullname} successfully sent client (ID: {ticket.id})')
                 successfull = True

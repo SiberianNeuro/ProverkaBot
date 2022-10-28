@@ -17,6 +17,7 @@ from app.keyboards.load_kb import get_check_keyboard
 from app.models.doc import TicketHistory, Ticket, User
 from app.services.config import Config
 from app.utils.states import Appeal
+from app.utils.validator import validate_appeal
 
 router = Router()
 router.message.filter(F.chat.type == 'private', CommonFilter())
@@ -25,21 +26,9 @@ router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
 
 @router.callback_query(CheckingCallback.filter(F.param == "appeal"), F.message.chat.type == 'private')
 async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback,
-                       db_session: sessionmaker):
-    async with db_session() as session:
-        ticket = await session.get(Ticket, int(callback_data.ticket_id))
-        if ticket.status_id == 5:
-            with suppress(TelegramBadRequest):
-                await call.message.edit_text(f"Этот клиент уже находится на апелляции."
-                                             f"Дата подачи: {ticket.updated_at}", reply_markup=None)
-                return
-        result = await session.execute(select(TicketHistory.id).where(
-            and_(TicketHistory.ticket_id == int(callback_data.ticket_id), TicketHistory.status_id == 6)
-        ))
-        if result:
-            with suppress(TelegramBadRequest):
-                await call.message.edit_text('Количество обжалований по этому клиенту превышено.', reply_markup=None)
-                return
+                       db_session: sessionmaker, user: User):
+    appeal = await validate_appeal(db_session, user, callback_data.ticket_id)
+
     await call.message.delete()
     await call.message.answer('Пожалуйста, напиши обоснование к апелляции (не более 4000 символов).',
                               reply_markup=ForceReply(input_field_placeholder='Текст апелляции'))
