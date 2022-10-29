@@ -52,6 +52,14 @@ class Ticket(Base):
     def link(self):
         return f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{self.id}'
 
+    @property
+    def create(self):
+        return self.created_at.strftime("%d.%m.%Y %H:%M:%S")
+
+    @property
+    def updated(self):
+        return self.updated_at.strftime("%d.%m.%Y %H:%M:%S")
+
 
 class TicketHistory(Base):
     __tablename__ = "doc_ticket_status_history"
@@ -67,3 +75,5 @@ class TicketHistory(Base):
     @property
     def link(self):
         return f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{self.ticket_id}'
+
+

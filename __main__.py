@@ -45,9 +45,19 @@ async def main():
     logger.info('Configure databases...')
 
     main_engine = create_async_engine(
-        f"postgresql+asyncpg://{config.main_db.postgresql_url}", echo=False, pool_pre_ping=True)
+        f"postgresql+asyncpg://{config.main_db.postgresql_url}",
+        echo=False,
+        pool_pre_ping=True,
+        pool_size=50,
+        max_overflow=-1
+    )
     kazarma_engine = create_async_engine(
-        f"mysql+aiomysql://{config.kaz_db.mysql_url}", echo=False, pool_pre_ping=True)
+        f"mysql+aiomysql://{config.kaz_db.mysql_url}",
+        echo=False,
+        pool_pre_ping=True,
+        pool_size=50,
+        max_overflow=-1
+        )
     try:
         async with main_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

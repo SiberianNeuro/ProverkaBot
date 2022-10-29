@@ -1,10 +1,12 @@
 from typing import Union, TypedDict
+import datetime as dt
 
+from loguru import logger
 from sqlalchemy import select, and_
 from sqlalchemy.orm import sessionmaker
 
 from app.models.kazarma import KazarmaClient, KazarmaClientUser, KazarmaUser
-from app.models.doc import User, Ticket, TicketHistory
+from app.models.doc import User, Ticket
 
 
 class TicketInstance(TypedDict):
@@ -69,12 +71,19 @@ async def validate_ticket(
     return TicketContainer(ticket=ticket, ticket_history=history_instance)
 
 
-async def validate_appeal(db: sessionmaker, user: User, ticket_id: int):
+async def validate_appeal(db: sessionmaker, ticket_id: int) -> Union[Ticket, str]:
     async with db() as session:
-        ticket = await session.get(Ticket, int(ticket_id))
-        if ticket.status_id in (2, 5, 6):
-            return f"Прямо сейчас по клиенту идет проверка.\n" \
-                                         f"Время начала проверки: {ticket.updated_at.isoformat(sep=' ', timespec)}"
-        if ticket.status_id == 12:
-            return 'По этому клиенту подано максимальное количество обжалований.'
-
+        try:
+            ticket = await session.get(Ticket, int(ticket_id))
+        except Exception as e:
+            logger.error(e)
+            session.rollback()
+            return "Ошибка в базе данных. Пожалуйста, попробуй снова."
+    if ticket.status_id in (2, 5, 6, 7, 8):
+        return f"⚠ Прямо сейчас по клиенту идет проверка.\n" \
+               f"Время начала проверки: <b>{ticket.updated}</b>"
+    if ticket.status_id == 12:
+        return f'❗ По этому клиенту уже были отклонены и апелляция, и кассация.\n' \
+               f'Дата проверки: <b>{ticket.updated}</b>\n\n' \
+               f'Комментарий по проверке:\n{ticket.comment}'
+    return ticket

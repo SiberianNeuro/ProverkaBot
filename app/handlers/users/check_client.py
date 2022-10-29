@@ -78,7 +78,6 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             await session.rollback()
             return
 
-        await state.update_data(author_id=callback_data.user_id, ticket_type=template[raw_status])
         with suppress(TelegramBadRequest):
             await call.message.edit_text(call.message.html_text + '\n\n' + answer_text, reply_markup=None)
         await bot.send_message(
@@ -93,6 +92,12 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             bot, key=StorageKey(bot_id=bot.id, chat_id=call.from_user.id, user_id=call.from_user.id),
             state=Checking.choice
         )
+        await state.storage.update_data(bot,
+                                        StorageKey(bot_id=bot.id, chat_id=call.from_user.id,
+                                                   user_id=call.from_user.id),
+                                        data={'ticket_type': template[raw_status]}
+                                        )
+        await state.update_data(ticket_type=template[raw_status])
         logger.opt(lazy=True).log('CHECK',
                                   f'User {user.fullname} started checking client (ID: {callback_data.value})')
 
@@ -134,7 +139,8 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             )
 
             session.add(ticket)
-            await session.merge(Ticket(id=int(ticket_id), status_id=new_status_id, comment=msg.text, updated_at=func.now()))
+            await session.merge(
+                Ticket(id=int(ticket_id), status_id=new_status_id, comment=msg.text, updated_at=func.now()))
             await session.commit()
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} '
@@ -167,7 +173,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
                          f'Клиент передан: <b>{current_ticket.created_at.isoformat(sep=" ", timespec="seconds")}</b>\n'
                          f'{ticket_type} рассмотрена: <b>{datetime.now().isoformat(sep=" ", timespec="seconds")}</b>\n\n'
                          f'<i>Комментарий проверяющего</i>:\n{msg.text}',
-                    reply_markup=await get_answer_keyboard(ticket_id)
+                    reply_markup=await get_answer_keyboard(ticket_id, new_status_id)
                 )
             except (TelegramUnauthorizedError, TelegramForbiddenError):
                 continue

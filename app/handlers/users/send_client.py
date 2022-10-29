@@ -30,24 +30,23 @@ async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: Use
     await msg.answer_document(document=result.FSI)
 
 
-@router.message(Text(text='Возможные апелляции 🛑'))
+@router.message(Text(text='Возможные обжалования 🛑'))
 async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: User):
-    result = await get_rejected_clients(db=db_session, user=user)
-    if isinstance(result, str):
-        await msg.answer(result)
-    elif not result:
-        await msg.answer('Таких клиентов нет')
-    else:
-        for res in result:
-            try:
-                await msg.answer(f'<b>Клиент</b>:\n'
-                                 f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{res["id"]}\n'
-                                 f'<b>Комментарий:</b>\n'
-                                 f'{res["comment"] if res["comment"] else "-"}',
-                                 reply_markup=await get_answer_keyboard(ticket_id=res['id']))
-            except TelegramRetryAfter as e:
-                logger.error(f'Floodcontrol - {e.retry_after}')
-                await asyncio.sleep(e.retry_after)
+    clients = await get_rejected_clients(db=db_session, user=user)
+    if isinstance(clients, str):
+        await msg.answer(clients)
+        return
+    for client in clients:
+        try:
+            await msg.answer(f'<b><a href="https://clinica.legal-prod.ru/cabinet/v3/#/clients/{client.id}">'
+                             f'{client.fullname}</a></b>:\n'
+                             f'Была ли апелляция: {"да" if client.status_id == 11 else "нет"}\n\n'
+                             f'<b>Комментарий проверяющиего:</b>\n'
+                             f'{client.comment if client.comment else "-"}',
+                             reply_markup=await get_answer_keyboard(ticket_id=client.id, new_status=client.status_id))
+        except TelegramRetryAfter as e:
+            logger.error(f'Floodcontrol - {e.retry_after}')
+            await asyncio.sleep(e.retry_after)
 
 
 @router.message(Text(text='Отправить клиента ▶️'))
@@ -109,7 +108,7 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 await session.commit()
             except Exception as e:
                 logger.error(e)
-                await call.message.answer('Произошла ошибка при добавлении в базу данных. Пожалуйста, попробуй снова.')
+                await call.answer('Произошла ошибка при базы данных. Пожалуйста, попробуй снова.', show_alert=True)
                 await session.rollback()
                 return
         with suppress(TelegramBadRequest):
@@ -119,20 +118,20 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 f'Отправлен на проверку.', reply_markup=None
             )
         await state.clear()
-        successfull = False
-        while not successfull:
+        successful = False
+        while not successful:
             try:
                 await bot.send_message(
                     chat_id=config.misc.checking_group,
-                    text=f'🟡<b>Новый клиент на проверку</b>:\n'
-                         f'{ticket_info["ticket"]["fullname"]}\n'
-                         f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_info["ticket"]["id"]}\n\n'
-                         f'<u>Кто отправил:</u>\n{user.fullname} @{call.from_user.username}\n'
+                    text=f'🟢 <b>Новый клиент на проверку</b>:\n'
+                         f'<b><a href="https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_info["ticket"]["id"]}">'
+                         f'{ticket_info["ticket"]["fullname"]}</a></b>\n\n'
+                         f'<u>Автор заявки:</u>\n{user.fullname} @{call.from_user.username}\n'
                          f'Когда отправил: <b>{datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>',
                     reply_markup=await get_check_keyboard(ticket_info["ticket"]["id"], user.id)
                 )
                 logger.opt(lazy=True).log('SEND', f'User {user.fullname} successfully sent client (ID: {ticket.id})')
-                successfull = True
+                successful = True
             except TelegramRetryAfter as e:
                 await asyncio.sleep(e.retry_after)
 

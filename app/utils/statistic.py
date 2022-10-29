@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, Union, Sequence
 from io import BytesIO
 
 import pandas as pd
@@ -31,17 +31,32 @@ async def get_buffered_file(df: pd.DataFrame) -> bytes:
 
 async def get_user_statistic(db: sessionmaker, user: User):
     stmt = select(
-        func.CONCAT("https://infoclinica.legal-prod.ru/cabinet/v3/#/clients/", Ticket.id).label('Ссылка'),
+        func.CONCAT("https://clinica.legal-prod.ru/cabinet/v3/#/clients/", Ticket.id).label('Ссылка'),
+        Ticket.fullname.label('ФИО клиента'),
         TicketStatus.name.label('Статус'),
+        Ticket.comment.label("Комментарий"),
         Ticket.created_at.label('Дата подачи клиента'),
-        Ticket.updated_at.label('Дата последнего изменения')
-    ).join(TicketStatus).where(or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id))
+        Ticket.updated_at.label('Дата последнего изменения'),
+    ). \
+        join(TicketStatus). \
+        where(or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id))
+    print(stmt)
     async with db() as session:
         result = await session.execute(stmt)
         clients = result.mappings().fetchall()
         await session.commit()
 
-    df = pd.DataFrame(data=clients, columns=["Ссылка", "Статус", "Дата подачи клиента", "Дата последнего изменения"])
+    df = pd.DataFrame(
+        data=clients,
+        columns=[
+            "Ссылка",
+            "ФИО клиента",
+            "Статус",
+            "Комментарий",
+            "Дата внесения клиента",
+            "Дата последнего изменения"
+        ]
+    )
     df.index += 1
 
     xlsx_data = await get_buffered_file(df)
@@ -52,42 +67,26 @@ async def get_user_statistic(db: sessionmaker, user: User):
     return StatisticContainer(FSI=buf, filepath=filepath)
 
 
-async def get_rejected_clients(db: sessionmaker, user: User):
-    in_query = select(
-        Ticket.id,
-        Ticket.comment,
-        func.COUNT(case((TicketHistory.status_id == 5, 1))).label('c')
-    ).\
-        filter(Ticket.status_id == 4, or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)).\
-        join(TicketHistory).group_by(Ticket.id, Ticket.comment)
-    in_query = in_query.cte('tickets')
-    out_query = select(in_query).filter(in_query.c.c < 2)
+async def get_rejected_clients(db: sessionmaker, user: User) -> Union[Sequence[Ticket], str]:
+    query = select(Ticket.id, Ticket.fullname, Ticket.status_id, Ticket.comment).\
+        filter(Ticket.status_id.in_((4, 11)),
+               or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id))
+    # in_query = select(
+    #     Ticket.id,
+    #     Ticket.comment,
+    #     func.COUNT(case((TicketHistory.status_id == 5, 1))).label('c')
+    # ).\
+    #     filter(Ticket.status_id == 4, or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)).\
+    #     join(TicketHistory).group_by(Ticket.id, Ticket.comment)
+    # in_query = in_query.cte('tickets')
+    # out_query = select(in_query).filter(in_query.c.c < 2)
     async with db() as session:
         try:
-            res = await session.execute(out_query)
+            res = await session.execute(query)
             re = res.mappings().fetchall()
-            return re
         except Exception as e:
             logger.error(e)
             return "Ошибка базы данных. Пожалуйста, попробуй снова."
-
-    # stmt = select(Ticket.id, Ticket.comment). \
-    #     join(TicketHistory). \
-    #     where(
-    #     and_(
-    #         Ticket.status_id == 4,
-    #         or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)
-    #     )
-    # ).\
-    #     group_by(Ticket.id, Ticket.comment).\
-    #     having(func.SUM(case([TicketHistory.status_id == 5, 1], else_=0)) < 2)
-    # print(stmt)
-    # async with db() as session:
-    #     try:
-    #         query = await session.execute(stmt)
-    #         tickets = query.mappings().fetchall()
-    #     except Exception as e:
-    #         logger.error(e)
-    #         return 'Ошибка базы данных. Пожалуйста, попробуй снова.'
-    #
-    # return tickets
+    if not re:
+        return "Клиентов не найдено."
+    return re
