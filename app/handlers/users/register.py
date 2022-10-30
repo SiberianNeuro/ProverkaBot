@@ -122,9 +122,9 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
         checking_group = await bot.get_chat(chat_id=config.misc.checking_group)
         await call.message.answer(f'Вся информация по моей работе аггрегируется в дашборд. '
                                   f'Вот <a href="https://datastudio.google.com/reporting/343994ec-faad-4bf1-8e2e-71ee8c398ff9">'
-                                  f'ссылка</a> на него.\n'
+                                  f'ссылка</a> на него.\n\n'
                                   f'Клиентов я отправляю в группу для проверки. Ссылка на неё - {checking_group.invite_link}'
-                                  f'Если нужна будет помощь по работе со мной - напиши /help')
+                                  f'\n\nЕсли нужна будет помощь по работе со мной - напиши /help')
         logger.opt(lazy=True).log(
             'REGISTRATION',
             f'User {user_data["fullname"]} completely registered as admin'
