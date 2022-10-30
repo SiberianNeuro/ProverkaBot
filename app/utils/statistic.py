@@ -1,4 +1,4 @@
-from typing import NamedTuple, Union, Sequence
+from typing import NamedTuple, Union, Sequence, Iterable, Any
 from io import BytesIO
 
 import pandas as pd
@@ -29,7 +29,7 @@ async def get_buffered_file(df: pd.DataFrame) -> bytes:
     return output.getvalue()
 
 
-async def get_user_statistic(db: sessionmaker, user: User):
+async def get_user_statistic(db: sessionmaker, user: User) -> Union[StatisticContainer, str]:
     stmt = select(
         func.CONCAT("https://clinica.legal-prod.ru/cabinet/v3/#/clients/", Ticket.id).label('Ссылка'),
         Ticket.fullname.label('ФИО клиента'),
@@ -42,9 +42,14 @@ async def get_user_statistic(db: sessionmaker, user: User):
         where(or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id))
     print(stmt)
     async with db() as session:
-        result = await session.execute(stmt)
-        clients = result.mappings().fetchall()
-        await session.commit()
+        try:
+            result = await session.execute(stmt)
+            clients = result.mappings().fetchall()
+            await session.commit()
+        except Exception as e:
+            logger.error(e)
+            await session.rollback()
+            return "Произошла ошибка базы данных. Пожалуйста, попробуй снова."
 
     df = pd.DataFrame(
         data=clients,
@@ -68,18 +73,10 @@ async def get_user_statistic(db: sessionmaker, user: User):
 
 
 async def get_rejected_clients(db: sessionmaker, user: User) -> Union[Sequence[Ticket], str]:
-    query = select(Ticket.id, Ticket.fullname, Ticket.status_id, Ticket.comment).\
+    query = select(Ticket.id, Ticket.fullname, Ticket.status_id, Ticket.comment). \
         filter(Ticket.status_id.in_((4, 11)),
                or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id))
-    # in_query = select(
-    #     Ticket.id,
-    #     Ticket.comment,
-    #     func.COUNT(case((TicketHistory.status_id == 5, 1))).label('c')
-    # ).\
-    #     filter(Ticket.status_id == 4, or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id)).\
-    #     join(TicketHistory).group_by(Ticket.id, Ticket.comment)
-    # in_query = in_query.cte('tickets')
-    # out_query = select(in_query).filter(in_query.c.c < 2)
+
     async with db() as session:
         try:
             res = await session.execute(query)
@@ -90,3 +87,44 @@ async def get_rejected_clients(db: sessionmaker, user: User) -> Union[Sequence[T
     if not re:
         return "Клиентов не найдено."
     return re
+
+
+class HistoryContainer(NamedTuple):
+    client: Ticket
+    history: Iterable[Any]
+
+
+async def get_history(db, client_id) -> Union[HistoryContainer, str]:
+    stmt = select(
+        TicketStatus.name, TicketHistory.created_at, TicketHistory.comment
+    ).join(TicketStatus, TicketStatus.id == TicketHistory.status_id). \
+        where(TicketHistory.ticket_id == int(client_id)). \
+        order_by(TicketHistory.created_at)
+    async with db() as session:
+        try:
+            client = await session.get(Ticket, int(client_id))
+            result = await session.execute(stmt)
+        except Exception as e:
+            logger.error(e)
+            await session.rollback()
+            return "Произошла ошибка базы данных. Пожалуйста, попробуй снова."
+        history = result.mappings().all()
+    if not history:
+        return "Среди отправленных мне клиентов такого ID нет. Пожалуйста, проверь корректность данных."
+    return HistoryContainer(client, history)
+
+
+async def get_for_checking_pool(db) -> Union[Iterable[Ticket], str]:
+    stmt = select(Ticket).filter(Ticket.status_id.in_((1, 5, 6))).order_by(Ticket.updated_at).limit(3)
+    async with db() as session:
+        try:
+            result = await session.execute(stmt)
+        except Exception as e:
+            logger.error(e)
+            await session.rollback()
+            return "Произошла ошибка базы данных. Пожалуйста, попробуй снова."
+    tickets = result.scalars().all()
+    print(tickets)
+    if not tickets:
+        return "Все возможные заявки проверены."
+    return tickets

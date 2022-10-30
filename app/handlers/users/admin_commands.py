@@ -11,9 +11,9 @@ router.message.filter(F.chat.type == "private", AdminFilter())
 router.callback_query.filter(F.message.chat.type == "private", AdminFilter())
 
 
-@router.message(Command(commands="стата", prefix="!", ignore_case=True))
-async def get_statistic(msg: types.Message, db_session: sessionmaker, command: CommandObject):
-    if command.args:
-        await msg.answer(f'{command.args} - какая-то срака.')
-    else:
-        await msg.answer(f'И где твои аргсы, пидор?')
+# @router.message(Command(commands="стата", prefix="!", ignore_case=True))
+# async def get_statistic(msg: types.Message, db_session: sessionmaker, command: CommandObject):
+#     if command.args:
+#         await msg.answer(f'{command.args} - какая-то срака.')
+#     else:
+#         await msg.answer(f'И где твои аргсы, пидор?')

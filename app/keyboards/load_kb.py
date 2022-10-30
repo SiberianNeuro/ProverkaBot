@@ -21,9 +21,9 @@ async def get_validate_keyboard():
     return keyboard.as_markup()
 
 
-async def get_check_keyboard(ticket_id: Union[str, int], user_id) -> InlineKeyboardMarkup:
+async def get_check_keyboard(ticket_id: Union[str, int]) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     keyboard.button(
-        text='Начать проверку', callback_data=SendCallback(param='check', value=ticket_id, user_id=user_id).pack()
+        text='Начать проверку', callback_data=SendCallback(param='check', value=ticket_id).pack()
     )
     return keyboard.as_markup()

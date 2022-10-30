@@ -3,6 +3,7 @@ from datetime import datetime
 
 from aiogram import Router, types, F, Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramUnauthorizedError, TelegramForbiddenError
+from aiogram.filters import Text
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.base import StorageKey
 from aiogram.types import ForceReply
@@ -12,16 +13,38 @@ from sqlalchemy.orm import sessionmaker
 
 from app.filters.common import CheckerFilter
 from app.keyboards.checking_kb import CheckingCallback, get_choice_keyboard, get_answer_keyboard
-from app.keyboards.load_kb import SendCallback
+from app.keyboards.load_kb import SendCallback, get_check_keyboard
 from app.models.doc import Ticket, User, TicketHistory
 from app.utils.states import Checking
+from app.utils.statistic import get_for_checking_pool
 
 router = Router()
 router.message.filter(F.chat.type == 'private', CheckerFilter())
 router.callback_query.filter(CheckerFilter())
 
+template = {
+    1: {'check_status': 2, 'type': 'Заявка', 'approved': 3, 'rejected': 4},
+    5: {'check_status': 7, 'type': 'Апелляция', 'approved': 9, 'rejected': 11},
+    6: {'check_status': 8, 'type': 'Кассация', 'approved': 10, 'rejected': 12},
+}
 
-@router.callback_query(F.message.chat.type.in_({"group", "supergroup"}), SendCallback.filter(F.param == 'check'))
+
+@router.message(Text(text='Заявки на проверку 🏷'))
+async def get_checking_pool(msg: types.Message, db_session: sessionmaker):
+    db_answer = await get_for_checking_pool(db_session)
+    if isinstance(db_answer, str):
+        await msg.answer(db_answer)
+        return
+
+    for ticket in db_answer:
+        text = f'<b>{template[ticket.status_id]["type"]}</b>\n\n' \
+               f'<b><a href="{ticket.link}">{ticket.fullname}</a></b>\n' \
+               f'Дата подачи: <b>{ticket.updated}</b>\n' \
+               f'Комментарий:\n{ticket.comment if ticket.comment else "-"}'
+        await msg.answer(text=text, reply_markup=await get_check_keyboard(ticket.id))
+
+
+@router.callback_query(SendCallback.filter(F.param == 'check'))
 async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db_session: sessionmaker,
                                 callback_data: SendCallback, user: User, bot: Bot, config):
     group_state = await state.storage.get_state(
@@ -33,11 +56,7 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             and group_state and group_state.startswith('Checking'):
         await call.answer('Сначала тебе нужно закончить проверку текущей заявки.', show_alert=True)
         return
-    template = {
-        1: {'check_status': 2, 'type': 'Заявка', 'approved': 3, 'rejected': 4},
-        5: {'check_status': 7, 'type': 'Апелляция', 'approved': 9, 'rejected': 11},
-        6: {'check_status': 8, 'type': 'Кассация', 'approved': 10, 'rejected': 12},
-    }
+
     answer_text = ''
     flag = False
     async with db_session() as session:
@@ -49,9 +68,12 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             answer_text = f'❕ <u>Проверка уже завершена:</u> {"одобрен" if raw_status == 3 else "отклонен"}.'
         elif raw_status in (1, 5, 6):
             flag = True
-            answer_text = f'🔄 <i>Принят в работу проверяющим:</i>\n' \
-                          f'{user.fullname} @{call.from_user.username}\n' \
-                          f'Начало проверки: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>'
+            if call.message.chat.type in ("group", "supergroup"):
+                answer_text = f'🔄 <i>Принят в работу проверяющим:</i>\n' \
+                              f'{user.fullname} @{call.from_user.username}\n' \
+                              f'Начало проверки: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>'
+            else:
+                answer_text = f'Начало проверки: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>'
 
         if not flag:
             with suppress(TelegramBadRequest):

@@ -27,6 +27,9 @@ router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
 @router.message(Text(text='Мои клиенты 📊'))
 async def get_my_metrics(msg: types.Message, db_session: sessionmaker, user: User):
     result = await get_user_statistic(db=db_session, user=user)
+    if isinstance(result, str):
+        await msg.answer(result)
+        return
     await msg.answer_document(document=result.FSI)
 
 
@@ -118,6 +121,7 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 f'Отправлен на проверку.', reply_markup=None
             )
         await state.clear()
+
         successful = False
         while not successful:
             try:
@@ -128,10 +132,9 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                          f'{ticket_info["ticket"]["fullname"]}</a></b>\n\n'
                          f'<u>Автор заявки:</u>\n{user.fullname} @{call.from_user.username}\n'
                          f'Когда отправил: <b>{datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>',
-                    reply_markup=await get_check_keyboard(ticket_info["ticket"]["id"], user.id)
+                    reply_markup=await get_check_keyboard(ticket_info["ticket"]["id"])
                 )
                 logger.opt(lazy=True).log('SEND', f'User {user.fullname} successfully sent client (ID: {ticket.id})')
                 successful = True
             except TelegramRetryAfter as e:
                 await asyncio.sleep(e.retry_after)
-
