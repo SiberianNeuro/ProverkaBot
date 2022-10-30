@@ -86,7 +86,7 @@ async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_sess
                      f'<u>Автор:</u>\n{user.fullname} @{msg.from_user.username}\n'
                      f'Поступление: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>\n\n'
                      f'<i>Обоснование:</i>\n{appeal_text}',
-                reply_markup=await get_check_keyboard(ticket_id, user.id)
+                reply_markup=await get_check_keyboard(ticket_id)
             )
             logger.opt(lazy=True).log('APPEAL', f'User {user.fullname} sent appeal for client (type: {appeal_type} |'
                                                 f'ID: {ticket.id})')

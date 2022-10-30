@@ -81,6 +81,7 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
             await call.message.edit_text('Тогда прошу тебя проверить ФИО и попробовать еще раз.', reply_markup=None)
         await state.set_state(Register.fullname)
         return
+    await call.message.delete()
     user_data = await state.get_data()
     user_data: Union[list, dict] = user_data['temp_users']
     if isinstance(user_data, list):
@@ -174,7 +175,7 @@ async def finish_registration(call: types.CallbackQuery, state: FSMContext, db_s
                                   f'Нажми <b>"Возможные обжалования 🛑"</b>, чтобы получить список отклоненных клиентов, '
                                   f'по которым можно подать обжалование.\n\n'
                                   f'Нажми <b>"Моя статистика 📊"</b>, чтобы получить Excel-таблицу с уже отправленными клиентами '
-                                  f'и их текущей ситуацией по проверке.'
+                                  f'и их текущей ситуацией по проверке.\n'
                                   f'Кроме того, информацию о проверке ты можешь найти в дашборде.\n'
                                   f'<a href="https://datastudio.google.com/reporting/3c3ddd97-6589-4304-ad33-0cbf4e690b75">'
                                   f'Ссылка на него</a>.',
