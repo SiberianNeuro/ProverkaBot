@@ -18,7 +18,7 @@ from app.models.kazarma import Kazarma
 
 async def set_bot_commands(bot: Bot):
     commands = [
-        BotCommand(command="start", description="Вернутся в меню"),
+        BotCommand(command="start", description="Вернуться в меню"),
         BotCommand(command="help", description="Получить помощь")
     ]
     await bot.set_my_commands(commands, scope=BotCommandScopeAllPrivateChats())
