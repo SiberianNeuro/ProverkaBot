@@ -75,7 +75,7 @@ async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMConte
 
 @router.callback_query(RegCallback.filter(F.param == 'confirm'), Register.confirm)
 async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: sessionmaker,
-                      callback_data: RegCallback):
+                      callback_data: RegCallback, bot: Bot, config):
     if callback_data.value == 0:
         with suppress(TelegramBadRequest):
             await call.message.edit_text('Тогда прошу тебя проверить ФИО и попробовать еще раз.', reply_markup=None)
@@ -92,8 +92,8 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
     if user_data['role_id'] in (5, 17, 29, 30):
         async with db_session() as session:
             result = await session.execute(select(User).filter(User.kazarma_id == user_data['role_id']))
-            user = result.first()
-            if user:
+            t_user = result.first()
+            if t_user:
                 with suppress(TelegramBadRequest):
                     await call.message.edit_text('Такой пользователь уже существует. '
                                                  'Напиши /start, чтобы начать заново',
@@ -101,7 +101,7 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
                 await state.clear()
                 await session.commit()
                 return
-            user = session.add(
+            session.add(
                 User(
                     id=call.from_user.id,
                     fullname=user_data['fullname'],
@@ -115,9 +115,15 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
 
             await session.commit()
         with suppress(TelegramBadRequest):
-            await call.message.edit_text(f'Вы определены как администратор. '
-                                         f'Добро пожаловать, {user_data["fullname"].split()[1]}',
+            await call.message.edit_text(f'Вы определены как администратор 😎\n'
+                                         f'Добро пожаловать, {user_data["fullname"].split()[1]}!',
                                          reply_markup=None)
+        checking_group = await bot.get_chat(chat_id=config.misc.checking_group)
+        await call.message.answer(f'Вся информация по моей работе аггрегируется в дашборд. '
+                                  f'Вот <a href="https://datastudio.google.com/reporting/343994ec-faad-4bf1-8e2e-71ee8c398ff9">'
+                                  f'ссылка</a> на него.\n'
+                                  f'Клиентов я отправляю в группу для проверки. Ссылка на неё - {checking_group.invite_link}'
+                                  f'Если нужна будет помощь по работе со мной - напиши /help')
         logger.opt(lazy=True).log(
             'REGISTRATION',
             f'User {user_data["fullname"]} completely registered as admin'
@@ -154,20 +160,25 @@ async def finish_registration(call: types.CallbackQuery, state: FSMContext, db_s
         await call.message.answer('Твоя должность определена, как должность проверяющего.\n'
                                   'Клиентов и апелляции для проверки я отправляю в специальную группу, '
                                   'вступи в неё по этой ссылке:\n'
-                                  f'👉 {checking_group.invite_link}',
+                                  f'👉 {checking_group.invite_link}\n\n'
+                                  f'Если нужна будет помощь по работе со мной - напиши /help',
                                   reply_markup=await keyboard_generator(user))
         logger.opt(lazy=True).log(
             'REGISTRATION',
             f'User {user_data["fullname"]} completely registered as checker user'
         )
     else:
-        await call.message.answer('Ты - отправляющий.\n'
-                                  'Что я умею:\n'
-                                  'Нажми <b>"Отправить клиента ▶️"</b>, чтобы загрузить клиента, '
-                                  'подходящего под условия, я помогу тебе в процессе загрузки\n'
-                                  'Кнопка <b>"Отклоненные клиенты 🔻"</b> вернет тебе список отклоненных клиентов\n'
-                                  'Кнопка <b>"Моя статистика 📊"</b> вернет тебе Excel-табличку со списком твоих клиентов '
-                                  'и их текущими статусами', reply_markup=await keyboard_generator(user))
+        await call.message.answer(f'Что я умею:\n'
+                                  f'Нажми <b>"Отправить клиента ▶️"</b>, чтобы загрузить клиента, '
+                                  f'подходящего под условия, я помогу тебе в процессе загрузки\n\n'
+                                  f'Нажми <b>"Возможные обжалования 🛑"</b>, чтобы получить список отклоненных клиентов, '
+                                  f'по которым можно подать обжалование.\n\n'
+                                  f'Нажми <b>"Моя статистика 📊"</b>, чтобы получить Excel-таблицу с уже отправленными клиентами '
+                                  f'и их текущей ситуацией по проверке.'
+                                  f'Кроме того, информацию о проверке ты можешь найти в дашборде.\n'
+                                  f'<a href="https://datastudio.google.com/reporting/3c3ddd97-6589-4304-ad33-0cbf4e690b75">'
+                                  f'Ссылка на него</a>.',
+                                  reply_markup=await keyboard_generator(user))
         logger.opt(lazy=True).log(
             'REGISTRATION',
             f'User {user_data["fullname"]} completely registered as common user'
