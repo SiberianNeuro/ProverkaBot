@@ -114,7 +114,6 @@ async def get_cluster(call: types.CallbackQuery, state: FSMContext, db_session: 
             )
 
             await session.commit()
-            await session.refresh(user)
         with suppress(TelegramBadRequest):
             await call.message.edit_text(f'Вы определены как администратор. '
                                          f'Добро пожаловать, {user_data["fullname"].split()[1]}',
