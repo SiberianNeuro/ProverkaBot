@@ -86,7 +86,7 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
                          f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_id}\n'
                          f'Отправляется на проверку.\n\nНажимая кнопку "Подтвердить", ты '
                          f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
-                         f'Ознакомиться с условиями по отправленным можно через команду <b>/help</b>',
+                         f'Ознакомиться с критериями можно через команду <b>/help</b>',
                          reply_markup=await get_validate_keyboard())
         await state.set_state(FSMTicket.confirm)
 
