@@ -78,7 +78,7 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
         if not flag:
             with suppress(TelegramBadRequest):
                 await call.message.edit_text(call.message.html_text + '\n\n' + answer_text, reply_markup=None)
-                await session.commit()
+
                 return
         try:
             session.add(
@@ -91,9 +91,9 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             await session.merge(Ticket(
                 id=callback_data.value,
                 status_id=template[raw_status]["check_status"],
-                updated_at=func.now()
+                updated_at=datetime.now()
             ))
-
+            await session.commit()
         except Exception as e:
             logger.error(e)
             await call.answer('Произошла ошибка в базе данных.Пожалуйста, попробуй снова', show_alert=True)
@@ -162,7 +162,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
 
             session.add(ticket)
             await session.merge(
-                Ticket(id=int(ticket_id), status_id=new_status_id, comment=msg.text, updated_at=func.now()))
+                Ticket(id=int(ticket_id), status_id=new_status_id, comment=msg.text, updated_at=datetime.now()))
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} '
                                       f'{"approved" if choice == 3 else "rejected"} '
@@ -191,6 +191,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
                     text=f'❌ <b>{ticket_type} отклонена</b>\n\n'
                          f'Клиент: {current_ticket.fullname}\n'
                          f'{ticket.link}\n\n'
+                         f'Дата создания: <b>{current_ticket.updated}</b>\n'
                          f'{ticket_type} рассмотрена: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>\n\n'
                          f'<i>Комментарий проверяющего</i>:\n{msg.text}',
                     reply_markup=await get_answer_keyboard(ticket_id, new_status_id)

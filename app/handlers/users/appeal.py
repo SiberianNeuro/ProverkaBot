@@ -74,7 +74,7 @@ async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_sess
             await msg.answer('Произошла ошибка при добавлении в базу данных. Пожалуйста, попробуй снова.')
             await session.rollback()
             return
-    await msg.answer(f'Обжалование по клиенту:\n<b><a href="{ticket.link}>{ticket.fullname}</a></b>\n\n'
+    await msg.answer(f'Обжалование по клиенту:\n<b><a href="{ticket.link}">{ticket.fullname}</a></b>\n\n'
                      f'Отправлено на проверку')
     successful = False
     await state.clear()
