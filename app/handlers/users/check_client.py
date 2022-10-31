@@ -163,7 +163,6 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             session.add(ticket)
             await session.merge(
                 Ticket(id=int(ticket_id), status_id=new_status_id, comment=msg.text, updated_at=func.now()))
-            await session.commit()
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} '
                                       f'{"approved" if choice == 3 else "rejected"} '
@@ -192,7 +191,6 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
                     text=f'❌ <b>{ticket_type} отклонена</b>\n\n'
                          f'Клиент: {current_ticket.fullname}\n'
                          f'{ticket.link}\n\n'
-                         f'Клиент передан: <b>{current_ticket.updated}</b>\n'
                          f'{ticket_type} рассмотрена: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>\n\n'
                          f'<i>Комментарий проверяющего</i>:\n{msg.text}',
                     reply_markup=await get_answer_keyboard(ticket_id, new_status_id)

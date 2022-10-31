@@ -46,6 +46,7 @@ async def main():
 
     main_engine = create_async_engine(
         f"postgresql+asyncpg://{config.main_db.postgresql_url}",
+        future=True,
         echo=False,
         pool_pre_ping=True,
         pool_size=50,
@@ -53,6 +54,7 @@ async def main():
     )
     kazarma_engine = create_async_engine(
         f"mysql+aiomysql://{config.kaz_db.mysql_url}",
+        future=True,
         echo=False,
         pool_pre_ping=True,
         pool_size=50,
