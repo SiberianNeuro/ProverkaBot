@@ -9,7 +9,6 @@ from sqlalchemy.orm import sessionmaker
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
-from sqlalchemy.pool import NullPool
 
 from app.middlewares.acl import CommonMiddleware
 from app.models.doc import Base
@@ -47,7 +46,7 @@ async def main():
     main_engine = create_async_engine(
         f"postgresql+asyncpg://{config.main_db.postgresql_url}",
         future=True,
-        echo=False,
+        echo=True,
         pool_pre_ping=True,
         pool_size=50,
         max_overflow=-1

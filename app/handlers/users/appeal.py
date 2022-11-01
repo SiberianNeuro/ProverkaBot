@@ -58,6 +58,9 @@ async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_sess
     async with db_session() as session:
         try:
             ticket = await session.get(Ticket, ticket_id)
+            if ticket.status_id in (5, 6):
+                await msg.answer("Во время составления твоей апелляции твой коллега по клиенту уже успел её подать.")
+                return
             session.add(TicketHistory(
                 ticket_id=ticket_id,
                 sender_id=msg.from_user.id,

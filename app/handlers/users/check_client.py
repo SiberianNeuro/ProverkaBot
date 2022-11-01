@@ -14,6 +14,7 @@ from sqlalchemy.orm import sessionmaker
 from app.filters.common import CheckerFilter
 from app.keyboards.checking_kb import CheckingCallback, get_choice_keyboard, get_answer_keyboard
 from app.keyboards.load_kb import SendCallback, get_check_keyboard
+from app.keyboards.main_kb import keyboard_generator
 from app.models.doc import Ticket, User, TicketHistory
 from app.utils.states import Checking
 from app.utils.statistic import get_for_checking_pool
@@ -62,6 +63,7 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
     async with db_session() as session:
         ticket: Ticket = await session.get(Ticket, callback_data.value)
         raw_status = ticket.status_id
+        print(raw_status)
         if raw_status in (2, 7, 8):
             answer_text = f'❕ <u>Уже на проверке.</u>'
         elif raw_status in (3, 4):
@@ -88,11 +90,8 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
                     status_id=template[raw_status]["check_status"]
                 )
             )
-            await session.merge(Ticket(
-                id=callback_data.value,
-                status_id=template[raw_status]["check_status"],
-                updated_at=datetime.now()
-            ))
+            ticket.status_id = template[raw_status]["check_status"]
+            ticket.updated_at = datetime.now()
             await session.commit()
         except Exception as e:
             logger.error(e)
@@ -145,6 +144,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
     ticket_id, choice, ticket_type_dict = ticket_info['ticket_id'], ticket_info['choice'], ticket_info['ticket_type']
     ticket_type = ticket_type_dict['type']
     new_status_id = ticket_type_dict['approved'] if choice else ticket_type_dict['rejected']
+    print(new_status_id)
 
     async with db_session() as session:
         try:
@@ -161,8 +161,10 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             )
 
             session.add(ticket)
-            await session.merge(
-                Ticket(id=int(ticket_id), status_id=new_status_id, comment=msg.text, updated_at=datetime.now()))
+            current_ticket.status_id = new_status_id
+            current_ticket.comment = msg.text
+            current_ticket.updated_at = datetime.now()
+            await session.commit()
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} '
                                       f'{"approved" if choice == 3 else "rejected"} '
@@ -172,7 +174,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             await msg.answer('Произошла ошибка в базе данных. Пожалуйста, попробуй снова.')
             await session.rollback()
             return
-    await msg.answer('Результаты проверки и комментарий сохранены.')
+    await msg.answer('Результаты проверки и комментарий сохранены.', reply_markup=await keyboard_generator(user))
     await state.clear()
     await state.storage.set_state(
         bot, key=StorageKey(bot_id=bot.id, chat_id=config.misc.checking_group, user_id=msg.from_user.id),
