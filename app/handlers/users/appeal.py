@@ -15,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 from app.filters.common import CommonFilter
 from app.keyboards.checking_kb import CheckingCallback
 from app.keyboards.load_kb import get_check_keyboard
+from app.keyboards.main_kb import keyboard_generator
 from app.models.doc import TicketHistory, Ticket, User
 from app.services.config import Config
 from app.utils.states import Appeal
@@ -78,7 +79,7 @@ async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_sess
             await session.rollback()
             return
     await msg.answer(f'Обжалование по клиенту:\n<b><a href="{ticket.link}">{ticket.fullname}</a></b>\n\n'
-                     f'Отправлено на проверку')
+                     f'Отправлено на проверку', reply_markup=await keyboard_generator(user))
     successful = False
     await state.clear()
     appeal_type = "🟡 Апелляция" if new_status_id == 5 else "🔴 Кассация"

@@ -193,7 +193,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
                     text=f'❌ <b>{ticket_type} отклонена</b>\n\n'
                          f'Клиент: {current_ticket.fullname}\n'
                          f'{ticket.link}\n\n'
-                         f'Дата создания: <b>{current_ticket.updated}</b>\n'
+                         f'Дата создания: <b>{current_ticket.create}</b>\n'
                          f'{ticket_type} рассмотрена: <b>{datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>\n\n'
                          f'<i>Комментарий проверяющего</i>:\n{msg.text}',
                     reply_markup=await get_answer_keyboard(ticket_id, new_status_id)
