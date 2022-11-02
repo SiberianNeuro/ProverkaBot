@@ -105,7 +105,6 @@ async def get_ticket_history(msg: types.Message, db_session: sessionmaker, comma
         for num, status in enumerate(client_history.history, 1):
             new_string = f'<b>{num}. {status.name}</b>\n' \
                          f'<i>{status.created_at.strftime("%d.%m.%Y %H:%M:%S")}</i>\n'
-            new_string += str(status.status_id)
             if status.status_id in (1, 5, 6):
                 new_string += f'Автор статуса: {status.fullname}\n\n'
             else:

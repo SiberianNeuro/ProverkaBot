@@ -32,7 +32,6 @@ async def get_fullname(call: types.CallbackQuery, state: FSMContext):
 
 @router.message(Register.fullname)
 async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMContext):
-    print(msg.text.title().strip())
     stmt = select(
         [
             func.CONCAT_WS(' ', KazarmaUser.lastname, KazarmaUser.firstname, KazarmaUser.middlename).label('fullname'),
@@ -48,7 +47,6 @@ async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMConte
             not_(KazarmaUser.email.contains('@mobile.test'))
         )
     )
-    print(stmt)
     async with db_session() as session:
         temp_user = await session.execute(stmt)
         temp_users = temp_user.mappings().all()
