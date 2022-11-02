@@ -42,7 +42,7 @@ async def get_info(msg: types.Message, db_session: sessionmaker, state: FSMConte
     ).join(KazarmaRole).filter(
         and_(
             func.CONCAT_WS(' ', KazarmaUser.lastname, KazarmaUser.firstname, KazarmaUser.middlename)
-            .ilike(msg.text.title().strip()),
+            .like(msg.text.title().strip()),
             KazarmaUser.active == 1,
             not_(KazarmaUser.email.contains('@mobile.test'))
         )

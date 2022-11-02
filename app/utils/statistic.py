@@ -96,9 +96,11 @@ class HistoryContainer(NamedTuple):
 
 async def get_history(db, client_id) -> Union[HistoryContainer, str]:
     stmt = select(
-        TicketStatus.name, TicketHistory.created_at, TicketHistory.comment
-    ).join(TicketStatus, TicketStatus.id == TicketHistory.status_id). \
-        where(TicketHistory.ticket_id == int(client_id)). \
+        TicketHistory.status_id, TicketStatus.name, TicketHistory.created_at,
+        User.fullname, User.is_checking, TicketHistory.comment).\
+        join(TicketStatus, TicketStatus.id == TicketHistory.status_id). \
+        join(User, User.id == TicketHistory.sender_id). \
+        where(TicketHistory.ticket_id == client_id). \
         order_by(TicketHistory.created_at)
     async with db() as session:
         try:

@@ -85,7 +85,7 @@ async def command_help(msg: types.Message, user: User, config, bot: Bot):
 
 
 @router.message(Command(commands='история', prefix='!', ignore_case=True))
-async def get_ticket_history(msg: types.Message, db_session: sessionmaker, command: CommandObject):
+async def get_ticket_history(msg: types.Message, db_session: sessionmaker, command: CommandObject, user: User):
     if not command.args:
         await msg.answer('После команды нужно ввести ID клиента.\n\n'
                          '<i>Например, !история 41000</i>')
@@ -104,8 +104,16 @@ async def get_ticket_history(msg: types.Message, db_session: sessionmaker, comma
         text_string = f'<b><a href="{client_history.client.link}">{client_history.client.fullname}</a></b>\n\n'
         for num, status in enumerate(client_history.history, 1):
             new_string = f'<b>{num}. {status.name}</b>\n' \
-                         f'<i>{status.created_at.strftime("%d.%m.%Y %H:%M:%S")}</i>\n\n' \
-                         f'Комментарий:\n{status.comment if status.comment else "-"}\n\n'
+                         f'<i>{status.created_at.strftime("%d.%m.%Y %H:%M:%S")}</i>\n'
+            new_string += str(status.status_id)
+            if status.status_id in (1, 5, 6):
+                new_string += f'Автор статуса: {status.fullname}\n\n'
+            else:
+                if status.is_checking or user.is_admin:
+                    new_string += f'Автор статуса: {status.fullname}\n\n'
+
+            new_string += f'Комментарий:\n{status.comment if status.comment else "-"}\n\n'
+
             if len(new_string) + len(text_string) >= 4000:
                 history_text.append(text_string)
                 text_string = f'<b><a href="{client_history.client.link}">{client_history.client.fullname}</a></b>\n\n'
