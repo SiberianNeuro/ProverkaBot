@@ -5,7 +5,6 @@ from aiogram import Router, types, F, Bot
 from aiogram.exceptions import TelegramRetryAfter
 from aiogram.filters import CommandStart, Command, Text, CommandObject
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.storage.base import StorageKey
 from sqlalchemy.orm import sessionmaker
 
 from app.keyboards.main_kb import keyboard_generator
@@ -17,7 +16,7 @@ router.message.filter(F.chat.type == "private")
 
 
 @router.message(CommandStart())
-async def start(msg: types.Message, user: User, state: FSMContext, db_session, bot: Bot, config):
+async def start(msg: types.Message, user: User, state: FSMContext):
     current_state = await state.get_state()
     if current_state and current_state.startswith('Checking'):
         await msg.answer('Сначала тебе нужно закончить проверку заявки.')

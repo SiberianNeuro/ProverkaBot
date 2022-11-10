@@ -117,7 +117,7 @@ async def get_history(db, client_id) -> Union[HistoryContainer, str]:
 
 
 async def get_for_checking_pool(db) -> Union[Iterable[Ticket], str]:
-    stmt = select(Ticket).filter(Ticket.status_id.in_((1, 5, 6))).order_by(Ticket.updated_at).limit(3)
+    stmt = select(Ticket).filter(Ticket.status_id.in_((1, 5, 6))).order_by(func.random()).limit(3)
     async with db() as session:
         try:
             result = await session.execute(stmt)
@@ -126,7 +126,6 @@ async def get_for_checking_pool(db) -> Union[Iterable[Ticket], str]:
             await session.rollback()
             return "Произошла ошибка базы данных. Пожалуйста, попробуй снова."
     tickets = result.scalars().all()
-    print(tickets)
     if not tickets:
         return "Все возможные заявки проверены."
     return tickets
