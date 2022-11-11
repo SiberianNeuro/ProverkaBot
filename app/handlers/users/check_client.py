@@ -31,7 +31,11 @@ template = {
 
 
 @router.message(Text(text='Заявки на проверку 🏷'))
-async def get_checking_pool(msg: types.Message, db_session: sessionmaker):
+async def get_checking_pool(msg: types.Message, db_session: sessionmaker, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state and current_state.startswith('Checking'):
+        await msg.answer('Сначала тебе нужно закончить проверку заявки.')
+        return
     db_answer = await get_for_checking_pool(db_session)
     if isinstance(db_answer, str):
         await msg.answer(db_answer)
@@ -108,7 +112,10 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
             f' "Одобрить" или "Отклонить".',
             reply_markup=await get_choice_keyboard(ticket.id)
         )
-        await state.set_state(Checking.choice)
+        await state.storage.set_state(
+            bot, key=StorageKey(bot_id=bot.id, chat_id=config.misc.checking_group, user_id=call.from_user.id),
+            state=Checking.choice
+        )
         await state.storage.set_state(
             bot, key=StorageKey(bot_id=bot.id, chat_id=call.from_user.id, user_id=call.from_user.id),
             state=Checking.choice
@@ -144,7 +151,6 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
     ticket_id, choice, ticket_type_dict = ticket_info['ticket_id'], ticket_info['choice'], ticket_info['ticket_type']
     ticket_type = ticket_type_dict['type']
     new_status_id = ticket_type_dict['approved'] if choice else ticket_type_dict['rejected']
-    print(new_status_id)
 
     async with db_session() as session:
         try:
@@ -167,7 +173,7 @@ async def get_check_comment(msg: types.Message, state: FSMContext, db_session: s
             await session.commit()
             logger.opt(lazy=True).log('CHECK',
                                       f'User {user.fullname} '
-                                      f'{"approved" if choice == 3 else "rejected"} '
+                                      f'{"approved" if choice else "rejected"} '
                                       f'client ticket (ID: {ticket_id})')
         except Exception as e:
             logger.error(e)
