@@ -40,7 +40,6 @@ async def get_user_statistic(db: sessionmaker, user: User) -> Union[StatisticCon
     ). \
         join(TicketStatus). \
         where(or_(Ticket.doc_id == user.kazarma_id, Ticket.law_id == user.kazarma_id))
-    print(stmt)
     async with db() as session:
         try:
             result = await session.execute(stmt)

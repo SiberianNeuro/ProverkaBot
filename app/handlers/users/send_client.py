@@ -20,7 +20,7 @@ from app.utils.validator import validate_ticket, TicketContainer
 from app.keyboards.load_kb import get_validate_keyboard, SendCallback, get_check_keyboard
 
 router = Router()
-router.message.filter(F.chat.type == 'private', CommonFilter())
+router.message.filter(F.chat.type == 'private', F.content_type == "text", CommonFilter())
 router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
 
 

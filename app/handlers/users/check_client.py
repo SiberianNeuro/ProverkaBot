@@ -67,7 +67,6 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
     async with db_session() as session:
         ticket: Ticket = await session.get(Ticket, callback_data.value)
         raw_status = ticket.status_id
-        print(raw_status)
         if raw_status in (2, 7, 8):
             answer_text = f'❕ <u>Уже на проверке.</u>'
         elif raw_status in (3, 4):
