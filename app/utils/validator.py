@@ -5,7 +5,7 @@ from loguru import logger
 from sqlalchemy import select, and_
 from sqlalchemy.orm import sessionmaker
 
-from app.models.kazarma import KazarmaClient, KazarmaClientUser, KazarmaUser
+from app.models.kazarma import KazarmaClient, KazarmaClientUser, KazarmaUser, TempClientUser
 from app.models.doc import User, Ticket
 
 
@@ -40,21 +40,68 @@ async def validate_ticket(
         #     return 'Метка "Отправлен в военкомат" не проставлена. Пожалуйста, поставь метку, а затем отправь мне ' \
         #            'ссылку заново.'
 
-        stmt = select(
+        get_main_users = select(
             KazarmaClientUser.user_id,
             KazarmaUser.role_id
         ).join(KazarmaUser).where(and_(KazarmaClientUser.active == 1, KazarmaClientUser.client_id == ticket_id))
-        ticket_data = await session.execute(stmt)
 
-        law_id = None
-        doc_id = None
-        for employee in ticket_data.mappings().all():
-            if employee.role_id in (2, 31):
-                law_id = employee.user_id
-            elif employee.role_id in (3, 8):
-                doc_id = employee.user_id
-    if user.kazarma_id not in (law_id, doc_id):
-        return "Данный клиент не закреплен за тобой. Ты можешь отправлять только собственных клиентов."
+        get_transaction_process = select(
+            TempClientUser.user_id,
+            KazarmaUser.role_id
+        ).join(KazarmaUser,  KazarmaUser.id == TempClientUser.user_id).where(TempClientUser.client_id == ticket_id)
+
+        get_temp_users = select(
+            TempClientUser.temp_user_id,
+            KazarmaUser.role_id
+        ).join(KazarmaUser,  KazarmaUser.id == TempClientUser.temp_user_id).where(TempClientUser.client_id == ticket_id)
+
+        ticket_data = await session.execute(get_main_users)
+        temp_ticket_data = await session.execute(get_transaction_process)
+        temp_transaction = await session.execute(get_temp_users)
+        main_users = ticket_data.mappings().all()
+        temp_user_transaction_data = temp_ticket_data.mappings().all()
+        temp_transaction_data = temp_transaction.mappings().all()
+
+    user_in_main_list = tuple(filter(lambda x: x.user_id == user.kazarma_id, main_users))
+    user_in_transaction_list = tuple(filter(lambda x: x.user_id == user.kazarma_id, temp_user_transaction_data))
+    user_is_temp = tuple(filter(lambda x: x.temp_user_id == user.kazarma_id, temp_transaction_data))
+    if not user_in_transaction_list and not user_in_main_list and not user_is_temp:
+        return "Данный клиент не закреплен за тобой."
+
+    law_id = None
+    doc_id = None
+
+    if user.role_id in (3, 8):
+        if user_is_temp:
+            main_user = tuple(filter(lambda x: x.role_id in (3, 8), temp_user_transaction_data))
+            doc_id = main_user[0]['user_id']
+        else:
+            doc_id = user_in_main_list[0]['user_id']
+
+        law_list = tuple(filter(lambda x: x.role_id in (2, 31), temp_user_transaction_data))
+        if not law_list:
+            law_list = tuple(filter(lambda x: x.role_id in (2, 31), main_users))
+        law_id = law_list[0]['user_id']
+
+    elif user.role_id in (2, 31):
+        if user_is_temp:
+            main_user = tuple(filter(lambda x: x.role_id in (2, 31), temp_user_transaction_data))
+            law_id = main_user[0]['user_id']
+        else:
+            law_id = user_in_main_list[0]['user_id']
+
+        doc_list = tuple(filter(lambda x: x.role_id in (3, 8), temp_user_transaction_data))
+        if not doc_list:
+            doc_list = tuple(filter(lambda x: x.role_id in (3, 8), main_users))
+        doc_id = doc_list[0]['user_id']
+    # law_id = None
+    # doc_id = None
+    #
+    # for employee in main_users:
+    #     if employee.role_id in (2, 31):
+    #         law_id = employee.user_id
+    #     elif employee.role_id in (3, 8):
+    #         doc_id = employee.user_id
 
     ticket = TicketInstance(
         id=temp_client.id,

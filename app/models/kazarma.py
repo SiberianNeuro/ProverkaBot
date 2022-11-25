@@ -48,3 +48,13 @@ class KazarmaClientUser(Kazarma):
     user_id = Column(Integer, ForeignKey(f"{KazarmaUser.__tablename__}.id"), primary_key=True)
     client_id = Column(Integer, ForeignKey(f"{KazarmaClient.__tablename__}.id"), primary_key=True)
     active = Column(SmallInteger)
+
+
+class TempClientUser(Kazarma):
+    __tablename__ = "crm_client_transfer"
+
+    client_id = Column(Integer, ForeignKey(f"{KazarmaClient.__tablename__}.id"), primary_key=True)
+    user_id = Column(Integer, ForeignKey(f"{KazarmaUser.__tablename__}.id"), primary_key=True)
+    temp_user_id = Column(Integer, ForeignKey(f"{KazarmaUser.__tablename__}.id"), primary_key=True)
+    return_date = Column(DateTime)
+    hash = Column(String(64))
