@@ -31,7 +31,7 @@ template = {
 
 
 @router.message(Text(text='Заявки на проверку 🏷'))
-async def get_checking_pool(msg: types.Message, db_session: sessionmaker, state: FSMContext):
+async def get_checking_pool(msg: types.Message, db_session: sessionmaker, state: FSMContext, user: User):
     current_state = await state.get_state()
     if current_state and current_state.startswith('Checking'):
         await msg.answer('Сначала тебе нужно закончить проверку заявки.')
@@ -47,6 +47,7 @@ async def get_checking_pool(msg: types.Message, db_session: sessionmaker, state:
                f'Дата подачи: <b>{ticket.updated}</b>\n' \
                f'Комментарий:\n{ticket.comment if ticket.comment else "-"}'
         await msg.answer(text=text, reply_markup=await get_check_keyboard(ticket.id))
+    logger.info(f'User {user.fullname} requested tickets to checkout.')
 
 
 @router.callback_query(SendCallback.filter(F.param == 'check'))
