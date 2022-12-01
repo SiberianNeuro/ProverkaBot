@@ -29,6 +29,8 @@ router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
 @router.callback_query(CheckingCallback.filter(F.param == "appeal"), F.message.chat.type == 'private')
 async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback,
                        db_session: sessionmaker):
+    await call.answer('Подача апелляций завершена.', show_alert=True)
+    return
     appeal: Union[Ticket, str] = await validate_appeal(db_session, callback_data.ticket_id)
     if isinstance(appeal, str):
         with suppress(TelegramBadRequest):
