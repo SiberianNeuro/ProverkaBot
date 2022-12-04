@@ -1,5 +1,4 @@
-from typing import Union, TypedDict
-import datetime as dt
+from typing import Union, TypedDict, NamedTuple, Iterable, Any
 
 from loguru import logger
 from sqlalchemy import select, and_
@@ -14,6 +13,8 @@ class TicketInstance(TypedDict):
     fullname: str
     doc_id: int
     law_id: int
+    status_id: int
+    comment: str | None
 
 
 class TicketHistoryInstance(TypedDict):
@@ -25,6 +26,77 @@ class TicketHistoryInstance(TypedDict):
 class TicketContainer(TypedDict):
     ticket: TicketInstance
     ticket_history: TicketHistoryInstance
+    already_in_db: bool
+
+
+class TicketEmployeesContainer(NamedTuple):
+    doc_id: Union[int, None]
+    law_id: Union[int, None]
+
+
+class RawTicketDataContainer(NamedTuple):
+    ticket: Ticket
+    ticket_kazarma: KazarmaClient
+    main_users: TicketEmployeesContainer
+    transfer: TicketEmployeesContainer
+
+
+async def _get_ticket_raw_data(db_session: sessionmaker, ticket_id: int) -> RawTicketDataContainer | str:
+    get_main_users = select(
+        KazarmaClientUser.user_id,
+        KazarmaUser.role_id
+    ).join(KazarmaUser).where(and_(KazarmaClientUser.active == 1, KazarmaClientUser.client_id == ticket_id))
+
+    get_transaction_process = select(
+        TempClientUser.user_id,
+        KazarmaUser.role_id
+    ).join(KazarmaUser, KazarmaUser.id == TempClientUser.user_id).where(TempClientUser.client_id == ticket_id)
+
+    ticket_kazarma_data = None
+
+    async with db_session() as session:
+        try:
+            ticket_db_data: Ticket = await session.get(Ticket, ticket_id)
+        except Exception as e:
+            logger.error(e)
+            return "Произошла ошибка базы данных. Пожалуйста, попробуй снова."
+
+        try:
+            ticket_kazarma_data: KazarmaClient = await session.get(KazarmaClient, ticket_id)
+        except Exception as e:
+            logger.error(e)
+            return "Произошла ошибка базы данных. Пожалуйста, попробуй снова."
+
+        if not ticket_kazarma_data:
+            return "Клиент не найден в базе данных. Пожалуйста, проверь правильность ссылки или ID."
+
+        try:
+            ticket_data = await session.execute(get_main_users)
+            temp_ticket_data = await session.execute(get_transaction_process)
+        except Exception as e:
+            logger.error(e)
+            return "Произошла ошибка базы данных. Пожалуйста, попробуй снова."
+
+        main_users = ticket_data.mappings().all()
+        temp_user_transaction_data = temp_ticket_data.mappings().all()
+
+    main_users = await _sort_users(main_users)
+    transfer_users = await _sort_users(temp_user_transaction_data)
+
+    return RawTicketDataContainer(
+        main_users=main_users,
+        transfer=transfer_users,
+        ticket=ticket_db_data,
+        ticket_kazarma=ticket_kazarma_data
+    )
+
+
+async def _sort_users(users: Iterable[dict | Any]) -> TicketEmployeesContainer:
+    doc = tuple(filter(lambda x: x.role_id in (3, 8), users))
+    doc = doc[0]['user_id'] if doc else None
+    law = tuple(filter(lambda x: x.role_id in (2, 31), users))
+    law = law[0]['user_id'] if law else None
+    return TicketEmployeesContainer(doc_id=doc, law_id=law)
 
 
 async def validate_ticket(
@@ -32,90 +104,28 @@ async def validate_ticket(
         ticket_id: Union[str, int],
         user: User
 ) -> Union[TicketContainer, str]:
-    async with db_session() as session:
-        temp_client: KazarmaClient = await session.get(KazarmaClient, ticket_id)
-        if not temp_client:
-            return "Клиент не найден в базе данных. Пожалуйста, проверь правильность ссылки или ID."
-        # if temp_client.is_send == 0:
-        #     return 'Метка "Отправлен в военкомат" не проставлена. Пожалуйста, поставь метку, потом отправь мне ' \
-        #            'ссылку заново.'
+    ticket_data = await _get_ticket_raw_data(db_session, ticket_id)
+    if isinstance(ticket_data, str):
+        return ticket_data
 
-        get_main_users = select(
-            KazarmaClientUser.user_id,
-            KazarmaUser.role_id
-        ).join(KazarmaUser).where(and_(KazarmaClientUser.active == 1, KazarmaClientUser.client_id == ticket_id))
-
-        get_transaction_process = select(
-            TempClientUser.user_id,
-            KazarmaUser.role_id
-        ).join(KazarmaUser,  KazarmaUser.id == TempClientUser.user_id).where(TempClientUser.client_id == ticket_id)
-
-        get_temp_users = select(
-            TempClientUser.temp_user_id,
-            KazarmaUser.role_id
-        ).join(KazarmaUser,  KazarmaUser.id == TempClientUser.temp_user_id).where(TempClientUser.client_id == ticket_id)
-
-        ticket_data = await session.execute(get_main_users)
-        temp_ticket_data = await session.execute(get_transaction_process)
-        temp_transaction = await session.execute(get_temp_users)
-        main_users = ticket_data.mappings().all()
-        temp_user_transaction_data = temp_ticket_data.mappings().all()
-        temp_transaction_data = temp_transaction.mappings().all()
-
-    user_in_main_list = tuple(filter(lambda x: x.user_id == user.kazarma_id, main_users))
-    user_in_transaction_list = tuple(filter(lambda x: x.user_id == user.kazarma_id, temp_user_transaction_data))
-    user_is_temp = tuple(filter(lambda x: x.temp_user_id == user.kazarma_id, temp_transaction_data))
-    if not user_in_transaction_list and not user_in_main_list and not user_is_temp:
-        return "Данный клиент не закреплен за тобой."
-
-    law_id = None
-    doc_id = None
-
-    if user.role_id in (3, 8):
-        if user_is_temp:
-            main_user = tuple(filter(lambda x: x.role_id in (3, 8), temp_user_transaction_data))
-            doc_id = main_user[0]['user_id']
-        else:
-            doc_id = user_in_main_list[0]['user_id']
-
-        law_list = tuple(filter(lambda x: x.role_id in (2, 31), temp_user_transaction_data))
-        if not law_list:
-            law_list = tuple(filter(lambda x: x.role_id in (2, 31), main_users))
-        law_id = law_list[0]['user_id']
-
-    elif user.role_id in (2, 31):
-        if user_is_temp:
-            main_user = tuple(filter(lambda x: x.role_id in (2, 31), temp_user_transaction_data))
-            law_id = main_user[0]['user_id']
-        else:
-            law_id = user_in_main_list[0]['user_id']
-
-        doc_list = tuple(filter(lambda x: x.role_id in (3, 8), temp_user_transaction_data))
-        if not doc_list:
-            doc_list = tuple(filter(lambda x: x.role_id in (3, 8), main_users))
-        doc_id = doc_list[0]['user_id']
-    # law_id = None
-    # doc_id = None
-    #
-    # for employee in main_users:
-    #     if employee.role_id in (2, 31):
-    #         law_id = employee.user_id
-    #     elif employee.role_id in (3, 8):
-    #         doc_id = employee.user_id
+    if user.kazarma_id not in (ticket_data.main_users.law_id, ticket_data.main_users.doc_id):
+        return "Этот клиент не закреплен за тобой."
 
     ticket = TicketInstance(
-        id=temp_client.id,
-        fullname=temp_client.fullname,
-        doc_id=doc_id,
-        law_id=law_id,
+        id=ticket_data.ticket_kazarma.id,
+        fullname=ticket_data.ticket.fullname,
+        doc_id=ticket_data.transfer.doc_id or ticket_data.main_users.doc_id,
+        law_id=ticket_data.transfer.law_id or ticket_data.main_users.law_id,
+        status_id=1,
+        comment=''
     )
     history_instance = TicketHistoryInstance(
-        ticket_id=temp_client.id,
+        ticket_id=ticket_data.ticket_kazarma.id,
         sender_id=user.id,
         status_id=1
     )
-
-    return TicketContainer(ticket=ticket, ticket_history=history_instance)
+    in_db = True if ticket_data.ticket else False
+    return TicketContainer(ticket=ticket, ticket_history=history_instance, already_in_db=in_db)
 
 
 async def validate_appeal(db: sessionmaker, ticket_id: int) -> Union[Ticket, str]:

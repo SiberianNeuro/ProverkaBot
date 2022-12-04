@@ -39,7 +39,7 @@ async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_da
         return
     await call.message.delete()
     await call.message.answer(f'{"Апелляция" if appeal.status_id == 4 else "Кассация"} по клиенту:\n'
-                              f'<a href="{appeal.link}">{appeal.fullname}</a>\n\n'
+                              f'<b><a href="{appeal.link}">{appeal.fullname}</a></b>\n\n'
                               f'Пожалуйста, напиши обоснование к апелляции (не более 4000 символов).',
                               reply_markup=ForceReply(input_field_placeholder='Текст апелляции'))
     await state.update_data(
@@ -63,7 +63,7 @@ async def send_appeal(msg: types.Message, state: FSMContext, user: User, db_sess
         try:
             ticket = await session.get(Ticket, ticket_id)
             if ticket.status_id in (5, 6):
-                await msg.answer("Во время составления твоей апелляции твой коллега по клиенту уже успел её подать.")
+                await msg.answer("Во время составления обжалования твой коллега по клиенту уже успел её подать.")
                 return
             session.add(TicketHistory(
                 ticket_id=ticket_id,

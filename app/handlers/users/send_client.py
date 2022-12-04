@@ -75,16 +75,7 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
         await msg.answer('Не нашел ID клиента в сообщении. Проверь, пожалуйста, чтобы все было верно.')
         return
     ticket_id = int(ticket_id.group(0))
-    async with db_session() as session:
-        try:
-            ticket = await session.get(Ticket, ticket_id)
-        except Exception as e:
-            logger.error(e)
-            await msg.answer('Ошибка базы данных. Пожалуйста, попробуй снова.')
-            return
-        if ticket:
-            await msg.answer('Этот клиент уже был загружен на проверку.')
-            return
+
     await state.update_data(ticket_id=ticket_id)
     ticket: TicketContainer = await validate_ticket(db_session, ticket_id, user)
     if isinstance(ticket, str):
@@ -115,8 +106,8 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
         ticket_history = TicketHistory(**ticket_info["ticket_history"])
         async with db_session() as session:
             try:
-                session.add(ticket)
                 session.add(ticket_history)
+                await session.merge(ticket)
                 await session.commit()
             except Exception as e:
                 logger.error(e)
@@ -137,7 +128,8 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
                 await bot.send_message(
                     chat_id=config.misc.checking_group,
                     text=f'🟢 <b>Новый клиент на проверку</b>:\n'
-                         f'<b><a href="https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_info["ticket"]["id"]}">'
+                         f'<b><a href="https://clinica.legal-prod.ru/cabinet/v3/#/clients/'
+                         f'{ticket_info["ticket"]["id"]}">'
                          f'{ticket_info["ticket"]["fullname"]}</a></b>\n\n'
                          f'<u>Автор заявки:</u>\n{user.fullname} @{call.from_user.username}\n'
                          f'Когда отправил: <b>{datetime.datetime.now().strftime("%d.%m.%Y %H:%M:%S")}</b>',

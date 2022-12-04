@@ -14,7 +14,7 @@ class SendClientMessageMiddleware(BaseMiddleware):
         if config.misc.send_client:
             return await handler(event, data)
 
-        await event.answer('Отправка новых клиентов отключена. Чтобы вернуться в главное меню, напиши /start.')
+        await event.answer('Отправка новых клиентов отключена. Чтобы отменить текущее действие, напиши /start.')
         return
 
 
@@ -28,7 +28,7 @@ class SendClientCallbackMiddleware(BaseMiddleware):
         if config.misc.send_client:
             return await handler(event, data)
 
-        await event.answer('Отправка новых клиентов отключена. Чтобы вернуться в главное меню, напиши /start.',
+        await event.answer('Отправка новых клиентов отключена. Чтобы отменить текущее действие, напиши /start.',
                            show_alert=True)
 
         return
@@ -44,7 +44,7 @@ class SendAppealCallbackMiddleware(BaseMiddleware):
         if config.misc.send_appeal:
             return await handler(event, data)
 
-        await event.answer('Отправка обжалований отключена. Чтобы вернуться в главное меню, напиши /start.',
+        await event.answer('Отправка обжалований отключена. Чтобы отменить текущее действие, напиши /start.',
                            show_alert=True)
         return
 
@@ -59,4 +59,4 @@ class SendAppealMessageMiddleware(BaseMiddleware):
         if config.misc.send_appeal:
             return await handler(event, data)
 
-        await event.answer('Отправка обжалований отключена. Чтобы вернуться в главное меню, напиши /start.')
+        await event.answer('Отправка обжалований отключена. Чтобы отменить текущее действие, напиши /start.')

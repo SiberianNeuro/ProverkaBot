@@ -28,9 +28,6 @@ async def start(msg: types.Message, user: User, state: FSMContext, config):
                          'Вижу, что ты еще не регистрировался, давай это исправлять!',
                          reply_markup=await start_button())
     else:
-        print(config.misc.send_client)
-        config.misc.send_client = False if config.misc.send_client else True
-
         await msg.answer(f'Привет, {user.fullname.split()[1]} 🖖\n'
                          f'Для получения помощи напиши /help', reply_markup=await keyboard_generator(user))
 

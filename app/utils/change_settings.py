@@ -23,7 +23,7 @@ async def change_bot_settings(config: Config, args: str) -> str:
         elif mode == "off":
             config.misc.send_appeal = False
 
-    await save_settings(setting, mode)
+    await _save_settings(setting, mode)
 
     return f"✅ Настройки сохранены\n\n" \
            f"Текущие настройки:\n" \
@@ -31,7 +31,7 @@ async def change_bot_settings(config: Config, args: str) -> str:
            f"Подача обжалований: <b>{'ВКЛ.' if config.misc.send_appeal else 'ВЫКЛ.'}</b>\n"
 
 
-async def save_settings(setting: str, mode: str):
+async def _save_settings(setting: str, mode: str):
     setting = setting.upper()
     mode = True if mode == "on" else False
 

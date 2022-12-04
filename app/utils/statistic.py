@@ -21,7 +21,7 @@ class StatisticContainer(NamedTuple):
     # df: Optional[pd.DataFrame]
 
 
-async def get_buffered_file(df: pd.DataFrame) -> bytes:
+async def _get_buffered_file(df: pd.DataFrame) -> bytes:
     output = BytesIO()
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
     df.to_excel(writer, index_label="№")
@@ -63,7 +63,7 @@ async def get_user_statistic(db: sessionmaker, user: User) -> Union[StatisticCon
     )
     df.index += 1
 
-    xlsx_data = await get_buffered_file(df)
+    xlsx_data = await _get_buffered_file(df)
 
     filename = f'{user.fullname.replace(" ", "_", 2)}_{date.today().isoformat()}.xlsx'
     filepath = Path(filename)

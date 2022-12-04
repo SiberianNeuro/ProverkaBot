@@ -23,13 +23,20 @@ class User(Base):
     is_checking = Column(Boolean, server_default=expression.false())
     is_admin = Column(Boolean, server_default=expression.false())
     clients_count = Column(Integer, server_default='0')
-    target_count = Column(Integer, server_default='0')
+    active = Column(Integer, server_default='1')
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), server_onupdate=func.now())
 
 
 class TicketStatus(Base):
     __tablename__ = "doc_lib_ticket_status"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(45))
+
+
+class TicketType(Base):
+    __tablename__ = "doc_lib_ticket_types"
 
     id = Column(Integer, primary_key=True)
     name = Column(String(45))
