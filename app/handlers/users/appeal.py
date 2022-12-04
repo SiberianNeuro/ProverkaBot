@@ -8,7 +8,7 @@ from aiogram.exceptions import TelegramBadRequest, TelegramRetryAfter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ForceReply
 from loguru import logger
-from sqlalchemy import select, func, and_
+from sqlalchemy import func
 
 from sqlalchemy.orm import sessionmaker
 
@@ -20,17 +20,18 @@ from app.models.doc import TicketHistory, Ticket, User
 from app.services.config import Config
 from app.utils.states import Appeal
 from app.utils.validator import validate_appeal
+from app.middlewares.configs import SendAppealMessageMiddleware, SendAppealCallbackMiddleware
 
 router = Router()
 router.message.filter(F.chat.type == 'private', CommonFilter())
 router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
+router.message.middleware(SendAppealMessageMiddleware())
+router.callback_query.middleware(SendAppealCallbackMiddleware())
 
 
 @router.callback_query(CheckingCallback.filter(F.param == "appeal"), F.message.chat.type == 'private')
 async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback,
                        db_session: sessionmaker):
-    await call.answer('Подача апелляций завершена.', show_alert=True)
-    return
     appeal: Union[Ticket, str] = await validate_appeal(db_session, callback_data.ticket_id)
     if isinstance(appeal, str):
         with suppress(TelegramBadRequest):

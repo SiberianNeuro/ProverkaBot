@@ -43,6 +43,8 @@ class TgBot:
 @dataclass
 class Misc:
     checking_group: str
+    send_client: bool
+    send_appeal: bool
 
 
 @dataclass
@@ -82,6 +84,8 @@ def load_config(path: str = None) -> Config:
          db=env.int("REDIS_DB")
         ),
         misc=Misc(
-            checking_group=env.str("CHECKING_GROUP_ID")
+            checking_group=env.str("CHECKING_GROUP_ID"),
+            send_client=env.bool("SEND_CLIENT"),
+            send_appeal=env.bool("SEND_APPEAL")
         )
     )

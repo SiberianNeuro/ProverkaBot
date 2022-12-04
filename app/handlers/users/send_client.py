@@ -17,11 +17,20 @@ from app.services.config import Config
 from app.utils.states import FSMTicket
 from app.utils.statistic import get_user_statistic, get_rejected_clients
 from app.utils.validator import validate_ticket, TicketContainer
+from app.middlewares.configs import SendClientMessageMiddleware, SendClientCallbackMiddleware
 from app.keyboards.load_kb import get_validate_keyboard, SendCallback, get_check_keyboard
 
 router = Router()
 router.message.filter(F.chat.type == 'private', F.content_type == "text", CommonFilter())
 router.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
+
+send_client = Router()
+send_client.message.filter(F.chat.type == 'private', F.content_type == "text", CommonFilter())
+send_client.callback_query.filter(F.message.chat.type == 'private', CommonFilter())
+send_client.message.middleware(SendClientMessageMiddleware())
+send_client.callback_query.middleware(SendClientCallbackMiddleware())
+
+router.include_router(send_client)
 
 
 @router.message(Text(text='Мои клиенты 📊'))
@@ -52,15 +61,14 @@ async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: Us
             await asyncio.sleep(e.retry_after)
 
 
-@router.message(Text(text='Отправить клиента ▶️'))
+@send_client.message(Text(text='Отправить клиента ▶️'))
 async def start_sending(msg: types.Message, state: FSMContext):
-    await msg.answer('Отправка клиентов отключена до окончания проверки.')
-    # await msg.answer('Пришли мне ссылку или ID клиента. Если передумаешь, либо что-то будет неверно,'
-    #                  ' напиши "отмена".')
-    # await state.set_state(FSMTicket.id)
+    await msg.answer('Пришли мне ссылку или ID клиента. Если передумаешь, либо что-то будет неверно,'
+                     ' напиши "отмена".')
+    await state.set_state(FSMTicket.id)
 
 
-@router.message(FSMTicket.id)
+@send_client.message(FSMTicket.id)
 async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessionmaker, user: User):
     ticket_id = re.search('\d+$', msg.text)
     if not ticket_id:
@@ -92,7 +100,7 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
         await state.set_state(FSMTicket.confirm)
 
 
-@router.callback_query(FSMTicket.confirm, SendCallback.filter(F.param == 'validate'))
+@send_client.callback_query(FSMTicket.confirm, SendCallback.filter(F.param == 'validate'))
 async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_session: sessionmaker,
                               callback_data: SendCallback, bot: Bot, config: Config, user: User):
     if not callback_data.value:

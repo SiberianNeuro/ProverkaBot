@@ -16,7 +16,7 @@ router.message.filter(F.chat.type == "private")
 
 
 @router.message(CommandStart())
-async def start(msg: types.Message, user: User, state: FSMContext):
+async def start(msg: types.Message, user: User, state: FSMContext, config):
     current_state = await state.get_state()
     if current_state and current_state.startswith('Checking'):
         await msg.answer('Сначала тебе нужно закончить проверку заявки.')
@@ -28,6 +28,9 @@ async def start(msg: types.Message, user: User, state: FSMContext):
                          'Вижу, что ты еще не регистрировался, давай это исправлять!',
                          reply_markup=await start_button())
     else:
+        print(config.misc.send_client)
+        config.misc.send_client = False if config.misc.send_client else True
+
         await msg.answer(f'Привет, {user.fullname.split()[1]} 🖖\n'
                          f'Для получения помощи напиши /help', reply_markup=await keyboard_generator(user))
 
