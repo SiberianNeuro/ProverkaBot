@@ -26,7 +26,6 @@ class TicketHistoryInstance(TypedDict):
 class TicketContainer(TypedDict):
     ticket: TicketInstance
     ticket_history: TicketHistoryInstance
-    already_in_db: bool
 
 
 class TicketEmployeesContainer(NamedTuple):
@@ -124,8 +123,10 @@ async def validate_ticket(
         sender_id=user.id,
         status_id=1
     )
-    in_db = True if ticket_data.ticket else False
-    return TicketContainer(ticket=ticket, ticket_history=history_instance, already_in_db=in_db)
+    already_loaded = True if not ticket_data.ticket or ticket_data.ticket.status_id == 13 else False
+    if not already_loaded:
+        return "Этот клиент уже загружен на проверку в этом отчетном периоде."
+    return TicketContainer(ticket=ticket, ticket_history=history_instance)
 
 
 async def validate_appeal(db: sessionmaker, ticket_id: int) -> Union[Ticket, str]:

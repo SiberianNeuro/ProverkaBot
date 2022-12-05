@@ -80,15 +80,15 @@ async def get_client_id(msg: types.Message, state: FSMContext, db_session: sessi
     ticket: TicketContainer = await validate_ticket(db_session, ticket_id, user)
     if isinstance(ticket, str):
         await msg.answer(ticket)
-    else:
-        await state.update_data(ticket_info=ticket)
-        await msg.answer(f'Клиент: <b>{ticket["ticket"]["fullname"]}</b>\n'
-                         f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_id}\n'
-                         f'Отправляется на проверку.\n\nНажимая кнопку "Подтвердить", ты '
-                         f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
-                         f'Ознакомиться с критериями можно через команду <b>/help</b>',
-                         reply_markup=await get_validate_keyboard())
-        await state.set_state(FSMTicket.confirm)
+        return
+    await state.update_data(ticket_info=ticket)
+    await msg.answer(f'Клиент: <b>{ticket["ticket"]["fullname"]}</b>\n'
+                     f'https://clinica.legal-prod.ru/cabinet/v3/#/clients/{ticket_id}\n'
+                     f'Отправляется на проверку.\n\nНажимая кнопку "Подтвердить", ты '
+                     f'даешь согласие на то, что клиент полностью соответствует всем критериям. '
+                     f'Ознакомиться с критериями можно через команду <b>/help</b>',
+                     reply_markup=await get_validate_keyboard())
+    await state.set_state(FSMTicket.confirm)
 
 
 @send_client.callback_query(FSMTicket.confirm, SendCallback.filter(F.param == 'validate'))
@@ -100,9 +100,7 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
     else:
         fsm_data = await state.get_data()
         ticket_info: TicketContainer = fsm_data['ticket_info']
-
         ticket = Ticket(**ticket_info["ticket"])
-
         ticket_history = TicketHistory(**ticket_info["ticket_history"])
         async with db_session() as session:
             try:
