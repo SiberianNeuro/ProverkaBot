@@ -113,7 +113,7 @@ async def validate_ticket(
 
     ticket = TicketInstance(
         id=ticket_data.ticket_kazarma.id,
-        fullname=ticket_data.ticket.fullname,
+        fullname=ticket_data.ticket_kazarma.fullname,
         doc_id=ticket_data.transfer.doc_id or ticket_data.main_users.doc_id,
         law_id=ticket_data.transfer.law_id or ticket_data.main_users.law_id,
         status_id=1,

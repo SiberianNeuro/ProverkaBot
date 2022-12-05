@@ -106,8 +106,8 @@ async def get_sending_confirm(call: types.CallbackQuery, state: FSMContext, db_s
         ticket_history = TicketHistory(**ticket_info["ticket_history"])
         async with db_session() as session:
             try:
-                session.add(ticket_history)
                 await session.merge(ticket)
+                session.add(ticket_history)
                 await session.commit()
             except Exception as e:
                 logger.error(e)
