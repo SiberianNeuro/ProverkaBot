@@ -134,7 +134,8 @@ async def get_group_check_start(call: types.CallbackQuery, state: FSMContext, db
 async def get_check_choice(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback):
     await state.update_data(ticket_id=callback_data.ticket_id, choice=callback_data.choice)
     answer_text = 'Решение принял. Пожалуйста, оставь комментарий по проверке.'
-    await call.message.delete()
+    with suppress(TelegramBadRequest):
+        await call.message.delete_reply_markup()
     await call.message.answer(answer_text,
                               reply_markup=ForceReply(input_field_placeholder='Твой комментарий по проверке'))
     await state.set_state(Checking.comment)

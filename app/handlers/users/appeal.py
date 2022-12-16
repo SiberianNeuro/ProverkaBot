@@ -34,10 +34,10 @@ async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_da
                        db_session: sessionmaker):
     appeal: Union[Ticket, str] = await validate_appeal(db_session, callback_data.ticket_id)
     if isinstance(appeal, str):
-        with suppress(TelegramBadRequest):
-            await call.message.edit_text(call.message.html_text + '\n\n' + appeal, reply_markup=None)
+        # with suppress(TelegramBadRequest):
+        #     await call.message.edit_text(call.message.html_text + '\n\n' + appeal, reply_markup=None)
+        await call.answer(appeal)
         return
-    await call.message.delete()
     await call.message.answer(f'{"Апелляция" if appeal.status_id == 4 else "Кассация"} по клиенту:\n'
                               f'<b><a href="{appeal.link}">{appeal.fullname}</a></b>\n\n'
                               f'Пожалуйста, напиши обоснование к апелляции (не более 4000 символов).',
