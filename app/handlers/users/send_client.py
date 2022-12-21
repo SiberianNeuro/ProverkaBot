@@ -63,6 +63,7 @@ async def get_my_rejected(msg: types.Message, db_session: sessionmaker, user: Us
 
 @send_client.message(Text(text='Отправить клиента ▶️'))
 async def start_sending(msg: types.Message, state: FSMContext):
+    await state.clear()
     await msg.answer('Пришли мне ссылку или ID клиента. Если передумаешь, либо что-то будет неверно,'
                      ' напиши "отмена".')
     await state.set_state(FSMTicket.id)

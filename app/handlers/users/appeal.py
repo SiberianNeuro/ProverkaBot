@@ -32,10 +32,9 @@ router.callback_query.middleware(SendAppealCallbackMiddleware())
 @router.callback_query(CheckingCallback.filter(F.param == "appeal"), F.message.chat.type == 'private')
 async def start_appeal(call: types.CallbackQuery, state: FSMContext, callback_data: CheckingCallback,
                        db_session: sessionmaker):
+    await state.clear()
     appeal: Union[Ticket, str] = await validate_appeal(db_session, callback_data.ticket_id)
     if isinstance(appeal, str):
-        # with suppress(TelegramBadRequest):
-        #     await call.message.edit_text(call.message.html_text + '\n\n' + appeal, reply_markup=None)
         await call.answer(appeal)
         return
     await call.message.answer(f'{"Апелляция" if appeal.status_id == 4 else "Кассация"} по клиенту:\n'
